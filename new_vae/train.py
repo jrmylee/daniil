@@ -58,7 +58,7 @@ def generate_training_data(X_tr):
 # Train Section
 def train(x_train, learning_rate, batch_size, epochs, chkpt_pth): 
   vae = VAE(
-      input_shape = (hop, TIME_AXIS_LENGTH * spec_split, 1),
+      input_shape = (HOP_SIZE, TIME_AXIS_LENGTH * spec_split, 1),
       conv_filters=(512, 256, 128, 64, 32),
       conv_kernels=(3, 3, 3, 3, 3),
       conv_strides=(2, 2, 2, 2, (2,1)),
@@ -71,7 +71,7 @@ def train(x_train, learning_rate, batch_size, epochs, chkpt_pth):
 
 def train_tfdata(x_train, learning_rate, epochs=10): 
   vae = VAE(
-      input_shape = (hop, spec_split*TIME_AXIS_LENGTH, 1),
+      input_shape = (HOP_SIZE, spec_split*TIME_AXIS_LENGTH, 1),
       conv_filters=(512, 256, 128, 64, 32),
       conv_kernels=(3, 3, 3, 3, 3),
       conv_strides=(2, 2, 2, 2, (2,1)),
@@ -103,7 +103,7 @@ X_raw_tr, y_raw_tr, X_raw_vl, y_raw_vl, X_raw_ts, y_raw_ts = load_raw_data()
 X_tr = generate_training_data(X_raw_tr)
 
 training_run_name = "my_melspecvae_model"
-checkpoint_save_directory = "./saved_models"
+checkpoint_save_directory = "./saved_models/"
 
 current_time = get_time_stamp()
 
