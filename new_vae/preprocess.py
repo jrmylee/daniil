@@ -9,7 +9,7 @@ import heapq
 from torchaudio.transforms import MelScale, Spectrogram
 import numpy as np
 import time
-# torch.set_default_tensor_type('torch.cuda.FloatTensor')
+torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 import json
 config_file = open('config.json',)
