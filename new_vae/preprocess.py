@@ -1,3 +1,4 @@
+import librosa
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -7,7 +8,6 @@ import math
 import heapq
 from torchaudio.transforms import MelScale, Spectrogram
 import numpy as np
-import librosa
 import time
 # torch.set_default_tensor_type('torch.cuda.FloatTensor')
 

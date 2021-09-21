@@ -20,6 +20,7 @@ TIME_AXIS_LENGTH = training_params['time_axis_length']
 spec_split = 1
 
 from preprocess import *
+from augment import augment_audio
 from model import VAE
 
 def load_raw_data():
@@ -56,7 +57,7 @@ def generate_training_data(X_tr):
 
 
 # Train Section
-def train(x_train, learning_rate, batch_size, epochs, chkpt_pth): 
+def train(x_train_noise, x_train_pure learning_rate, batch_size, epochs, chkpt_pth): 
   vae = VAE(
       input_shape = (HOP_SIZE, TIME_AXIS_LENGTH * spec_split, 1),
       conv_filters=(512, 256, 128, 64, 32),
@@ -66,27 +67,14 @@ def train(x_train, learning_rate, batch_size, epochs, chkpt_pth):
   )
   vae.summary()
   vae.compile(learning_rate)
-  vae.train(x_train, batch_size, epochs, chkpt_pth)
-  return vae
-
-def train_tfdata(x_train, learning_rate, epochs=10): 
-  vae = VAE(
-      input_shape = (HOP_SIZE, spec_split*TIME_AXIS_LENGTH, 1),
-      conv_filters=(512, 256, 128, 64, 32),
-      conv_kernels=(3, 3, 3, 3, 3),
-      conv_strides=(2, 2, 2, 2, (2,1)),
-      latent_space_dim = VECTOR_DIM
-  )
-  vae.summary()
-  vae.compile(learning_rate)
-  vae.train(x_train, num_epochs=epochs)
+  vae.train(x_train_noise, x_train_pure, batch_size, epochs, chkpt_pth)
   return vae
 
 def continue_training(checkpoint):
   vae = VAE.load(checkpoint)
   vae.summary()
   vae.compile(LEARNING_RATE)
-  vae.train(X_tr,BATCH_SIZE,EPOCHS)
+  vae.train(x_train_noise, x_train_pure, BATCH_SIZE,EPOCHS)
   return vae
 
 def load_model(checkpoint):
@@ -100,12 +88,15 @@ def load_model(checkpoint):
 # Train!
 X_raw_tr, y_raw_tr, X_raw_vl, y_raw_vl, X_raw_ts, y_raw_ts = load_raw_data()
 
-X_tr = generate_training_data(X_raw_tr)
+X_noised_tr = augment_audio(X_raw_tr, SAMPLE_RATE)
+
+X_tr_pure = generate_training_data(X_raw_tr)
+X_tr_noised = generate_training_date(X_noised_tr)
 
 training_run_name = "my_melspecvae_model"
 checkpoint_save_directory = "./saved_models/"
 
 current_time = get_time_stamp()
 
-vae = train(X_tr, LEARNING_RATE, BATCH_SIZE, EPOCHS, checkpoint_save_directory)
+vae = train(X_tr_noised, X_tr_pure, LEARNING_RATE, BATCH_SIZE, EPOCHS, checkpoint_save_directory)
 vae.save(f"{checkpoint_save_directory}{training_run_name}_{current_time}_h{HOP_SIZE}_w{TIME_AXIS_LENGTH}_z{VECTOR_DIM}")
