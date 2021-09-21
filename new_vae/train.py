@@ -57,7 +57,7 @@ def generate_training_data(X_tr):
 
 
 # Train Section
-def train(x_train_noise, x_train_pure learning_rate, batch_size, epochs, chkpt_pth): 
+def train(x_train_noise, x_train_pure, learning_rate, batch_size, epochs, chkpt_pth): 
   vae = VAE(
       input_shape = (HOP_SIZE, TIME_AXIS_LENGTH * spec_split, 1),
       conv_filters=(512, 256, 128, 64, 32),
