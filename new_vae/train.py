@@ -88,7 +88,7 @@ def load_model(checkpoint):
 # Train!
 X_raw_tr, y_raw_tr, X_raw_vl, y_raw_vl, X_raw_ts, y_raw_ts = load_raw_data()
 
-X_noised_tr = augment_audio(X_raw_tr, SAMPLE_RATE)
+X_noised_tr = augment_audio(X_raw_tr, SAMPLE_RATE).numpy()
 
 X_tr_pure = generate_training_data(X_raw_tr)
 X_tr_noised = generate_training_date(X_noised_tr)
