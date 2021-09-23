@@ -23,7 +23,7 @@ def get_training_set():
 
 def get_dataset(csv, ds_dir=root_dir):
     audio_filenames, midi_filenames = [], []
-    for row in csv:
+    for row in csv.iterrows():
         audio, midi = row["audio_filename"], row["midi_filename"]
         audio_filenames.append(audio)
         midi_filenames.append(midi)
@@ -50,3 +50,5 @@ def prepare_for_training(ds, shuffle_buffer_size=1024, batch_size=64):
     ds = ds.prefetch(buffer_size=AUTOTUNE)
 
     return ds
+
+print(get_training_set())
