@@ -33,7 +33,7 @@ def get_dataset(csv, ds_dir=root_dir):
     return dataset
 
 def load_audio(audio_filepath, midi_filepath):
-    audio = tf.io.read_file(file_path)
+    audio = tf.io.read_file(audio_filepath)
     audio, sample_rate = tf.audio.decode_wave(audio, desired_chnnels=1, desired_samples=44100)
     return audio, midi_filepath
 
