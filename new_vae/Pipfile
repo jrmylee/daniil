@@ -11,6 +11,9 @@ ipykernel = "*"
 audiomentations = "*"
 pydub = "*"
 torch-audiomentations = "*"
+matplotlib = "*"
+tensorflow-datasets = "*"
+ipywidgets = "*"
 
 [dev-packages]
 

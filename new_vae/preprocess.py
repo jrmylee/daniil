@@ -137,7 +137,7 @@ def audio_array(path):
   return np.array(adata)
 
 #Concatenate spectrograms in array along the time axis
-def testass(a):
+def concat_spectrograms(a):
   but=False
   con = np.array([])
   nim = a.shape[0]
@@ -152,7 +152,7 @@ def testass(a):
   return np.squeeze(con)
 
 #Split spectrograms in chunks with equal size
-def splitcut(data):
+def split_spectrograms(data):
   ls = []
   mini = 0
   minifinal = spec_split*TIME_AXIS_LENGTH  #max spectrogram length
