@@ -34,7 +34,7 @@ def get_dataset(csv, ds_dir=root_dir):
 
 def load_audio(audio_filepath, midi_filepath):
     audio = tf.io.read_file(audio_filepath)
-    audio, sample_rate = tf.audio.decode_wave(audio, desired_chnnels=1, desired_samples=44100)
+    audio, sample_rate = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=44100)
     return audio, midi_filepath
 
 def prepare_for_training(ds, shuffle_buffer_size=1024, batch_size=64):
@@ -50,5 +50,3 @@ def prepare_for_training(ds, shuffle_buffer_size=1024, batch_size=64):
     ds = ds.prefetch(buffer_size=AUTOTUNE)
 
     return ds
-
-print(get_training_set())
