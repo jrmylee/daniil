@@ -60,7 +60,7 @@ def load_audio(audio_filepath, midi_filepath):
     audio = tf.reshape(audio, (44100, ))
     
     spec_clean, spec_dirty = mel_spec(audio), mel_spec(augment_audio(audio))
-    paddings = tf.constant([[0, 3], [0,0]])
+    paddings = tf.constant([[0, 19], [0,0]])
     spec_clean, spec_dirty = tf.pad(spec_clean, paddings, "CONSTANT"), tf.pad(spec_dirty, paddings, "CONSTANT")
     spec_clean, spec_dirty = tf.expand_dims(spec_clean, -1), tf.expand_dims(spec_dirty, -1)
     
