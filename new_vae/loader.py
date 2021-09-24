@@ -2,12 +2,24 @@ import pandas as pd
 import os
 import tensorflow as tf
 from audiomentations import Compose, AddGaussianNoise, TimeStretch, PitchShift, Shift
+from preprocess import *
+import numpy as np
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 root_dir = "/home/jerms/data/maestro-v3.0.0"
 csv_name = "maestro-v3.0.0.csv"
 _SEED = 2021
+
+# this is hard coded for GTZan
+# generates spectrograms from dataset
+def generate_training_data(X_tr):
+    print("generating training data")
+    aspec = tospec(X_tr) 
+    new_shape = ((0, 0), (0, 0), (0, 3), (0, 0))
+    aspec = np.pad(aspec, pad_width=new_shape, mode='constant', constant_values=0)
+    adata = split_spectrograms(aspec)
+    return adata
 
 def get_training_set():
     csv_dir = os.path.join(root_dir, csv_name)
@@ -46,7 +58,9 @@ def augment_audio(audio):
 def load_audio(audio_filepath, midi_filepath):
     audio = tf.io.read_file(audio_filepath)
     audio, sample_rate = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=44100)
-    return audio, augment_audio(audio)
+
+    spec_clean, spec_dirty = prep(audio), prep(augment(audio))
+    return spec_clean, spec_dirty
 
 def prepare_for_training(ds, shuffle_buffer_size=1024, batch_size=64):
     # Randomly shuffle (file_path, label) dataset

@@ -22,7 +22,7 @@ spec_split = 1
 from preprocess import *
 from augment import augment_audio
 from model import VAE
-from data.loader import get_training_set
+from loader import get_training_set
 
 def load_raw_data():
     print("loading raw data")
@@ -45,15 +45,7 @@ def load_raw_data():
     X_ts = X_ts[:,:-1]
     return X_tr, y_tr, X_vl, y_vl, X_ts, y_ts
 
-# this is hard coded for GTZan
-# generates spectrograms from dataset
-def generate_training_data(X_tr):
-    print("generating training data")
-    aspec = tospec(X_tr) 
-    new_shape = ((0, 0), (0, 0), (0, 3), (0, 0))
-    aspec = np.pad(aspec, pad_width=new_shape, mode='constant', constant_values=0)
-    adata = split_spectrograms(aspec)
-    return adata
+
 # --------------------------------------------------------------------------------
 
 
