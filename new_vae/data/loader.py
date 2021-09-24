@@ -53,11 +53,5 @@ def prepare_for_training(ds, shuffle_buffer_size=1024, batch_size=64):
     ds = ds.shuffle(buffer_size=shuffle_buffer_size)
     # Load and decode audio from file paths
     ds = ds.map(load_audio, num_parallel_calls=AUTOTUNE)
-    # Repeat dataset forever
-    ds = ds.repeat()
-    # Prepare batches
-    ds = ds.batch(batch_size)
-    # Prefetch
-    ds = ds.prefetch(buffer_size=AUTOTUNE)
 
     return ds
