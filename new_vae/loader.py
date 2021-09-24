@@ -60,7 +60,7 @@ def load_audio(audio_filepath, midi_filepath):
     audio = tf.reshape(audio, (44100, ))
     
     spec_clean, spec_dirty = mel_spec(audio), mel_spec(augment_audio(audio))
-    print(spec_clean.shape)
+    spec_clean, spec_dirty = tf.expand_dims(spec_clean, -1), tf.expand_dims(spec_dirty, -1)
     return spec_clean, spec_dirty
 
 def prepare_for_training(ds, shuffle_buffer_size=1024, batch_size=64):
