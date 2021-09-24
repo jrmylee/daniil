@@ -56,7 +56,7 @@ class VAE:
     self._build_autoencoder()
 
   def compile(self, learning_rate=0.0001):
-    optimizer = tf.keras.optimizer.Adam(learning_rate=learning_rate)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     klDivergence = tf.keras.metrics.KLDivergence(name='kullback_leibler_divergence', dtype=None)
     
     self.model.compile(optimizer=optimizer, loss=tf.keras.losses.BinaryCrossentropy(),
