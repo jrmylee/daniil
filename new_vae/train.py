@@ -66,9 +66,12 @@ def train(x_train_pure, x_train_noised, learning_rate, batch_size, epochs, chkpt
       conv_strides=(2, 2, 2, 2, (2,1)),
       latent_space_dim = VECTOR_DIM
   )
+  print("batch size: " + str(batch_size))
+  print(x_train_pure)
+  print(x_train_noised)
   vae.summary()
   vae.compile(learning_rate)
-  vae.train(x_train_pure, x_train_noised, batch_size, epochs, chkpt_pth)
+  vae.train(x_train_pure, x_train_pure, None, epochs, chkpt_pth)
   return vae
 
 def continue_training(checkpoint):

@@ -1,7 +1,7 @@
 from audiomentations import Compose, AddGaussianNoise, TimeStretch, PitchShift, Shift
 # import torch
 # from torch_audiomentations import Compose, AddColoredNoise, Gain, LowPassFilter, HighPassFilter
-
+import tensorflow as tf
 def augment_audio(audio, midi_filepath):
     sr = 22050
     augment = Compose([
@@ -10,7 +10,9 @@ def augment_audio(audio, midi_filepath):
         PitchShift(min_semitones=-4, max_semitones=4, p=0.5),
         Shift(min_fraction=-0.5, max_fraction=0.5, p=0.5),
     ])
-    return augment(samples=audio, sample_rate=sr), midi_filepath
+    print(audio.shape)
+    print(midi_filepath)
+    return audio, midi_filepath
 
 # def augment_audio(X_tr, sr):
 #     X_torch_tr = torch.tensor(X_tr).reshape((X_tr.shape[0], 1, X_tr.shape[1]))
