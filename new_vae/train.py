@@ -106,9 +106,14 @@ vae = VAE(
 vae.summary()
 vae.compile(LEARNING_RATE)
 
-for batch in ds:
-  x, x_hat = batch
-  vae.train(x, x_hat, 64, epochs, train_steps, chkpt_pth)
+for epoch in EPOCHS:
+  print(str(epoch) + " epoch starts")
+  i = 0
+  for batch in ds:
+    print(str(i) + "-th batch")
+    x, x_hat = batch
+    vae.train(x, x_hat, 64, epochs, train_steps, chkpt_pth)
+    i += 1
 
 vae.save(f"{checkpoint_save_directory}{training_run_name}_{current_time}_h{HOP_SIZE}_w{TIME_AXIS_LENGTH}_z{VECTOR_DIM}")
 
