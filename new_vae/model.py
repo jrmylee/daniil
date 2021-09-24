@@ -10,7 +10,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 import numpy as np
 import tensorflow as tf
 
-tf.compat.v1.disable_eager_execution()
+# tf.compat.v1.disable_eager_execution()
 #tf.disable_v2_behavior()
 print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
