@@ -60,7 +60,9 @@ class VAE:
     optimizer = Adam(learning_rate=learning_rate)
     self.model.compile(optimizer=optimizer, loss=self._calculate_combined_loss,
                        metrics=[self._calculate_reconstruction_loss,
-                                self._calculate_kl_loss])
+                                tf.keras.metrics.KLDivergence(
+                                    name='kullback_leibler_divergence', dtype=None
+                                )])
 
   def train(self, ds, batch_size, num_epochs, train_steps, checkpoint_path):
     # checkpoint = ModelCheckpoint(checkpoint_path, monitor='loss', verbose=1,
