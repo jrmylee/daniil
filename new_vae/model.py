@@ -62,7 +62,7 @@ class VAE:
     self.model.compile(optimizer=optimizer, loss=tf.keras.losses.BinaryCrossentropy(),
                        metrics=[klDivergence])
 
-  def train(self, x, x_hat, batch_size, num_epochs, train_steps, checkpoint_path):
+  def train(self, x, x_hat, batch_size, num_epochs, checkpoint_path):
     # checkpoint = ModelCheckpoint(checkpoint_path, monitor='loss', verbose=1,
     #                             save_best_only=True, mode='auto', period=1)
     self.model.fit(x_hat, x,
