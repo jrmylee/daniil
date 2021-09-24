@@ -60,7 +60,7 @@ class VAE:
     klDivergence = tf.keras.metrics.KLDivergence(name='kullback_leibler_divergence', dtype=None)
     
     self.model.compile(optimizer=optimizer, loss=tf.keras.losses.BinaryCrossentropy(),
-                       metrics=[klDivergence])
+                       metrics=[klDivergence], run_eagerly=True)
 
   def train(self, ds, batch_size, num_epochs, train_steps, checkpoint_path):
     # checkpoint = ModelCheckpoint(checkpoint_path, monitor='loss', verbose=1,
