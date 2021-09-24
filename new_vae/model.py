@@ -258,7 +258,7 @@ class VAE:
 class EncoderOutputLayer(Layer):
   def __init__(self, sample_point, name="encoder_output", **kwargs):
     super(EncoderOutputLayer, self).__init__(name=name, **kwargs)
-    self.sample_point = sample_point
+    self.sample_point = tf.Variable(sample_point)
 
   def call(self, mu_and_var):
     return self.sample_point(mu_and_var)
