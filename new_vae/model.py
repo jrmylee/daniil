@@ -3,13 +3,15 @@ import os
 import pickle
 
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization, Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
+from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization, Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda, Layer
 from tensorflow.keras import backend as K
 from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.callbacks import ModelCheckpoint
 import numpy as np
 import tensorflow as tf
 
+# tf.compat.v1.disable_eager_execution()
+#tf.disable_v2_behavior()
 print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
 class VAE:
@@ -248,6 +250,17 @@ class VAE:
 
       return sampled_point
 
-    x = Lambda(sample_point_from_normal_distribution, 
-               name="encoder_output")([self.mu, self.log_variance])
+    x = EncoderOutputLayer(sample_point_from_normal_distribution)([self.mu, self.log_variance])
     return x
+
+class EncoderOutputLayer(Layer):
+  def __init__(self, sample_point, name="encoder_output", **kwargs):
+        super(EncoderOutputLayer, self).__init__(name=name, **kwargs)
+        self.sample_point = tf.Variable(sample_point)
+
+    def call(self, dummy):
+        return self.sample_point
+
+    def get_config(self):
+        config = super(EncoderOutputLayer, self).get_config()
+        return config
