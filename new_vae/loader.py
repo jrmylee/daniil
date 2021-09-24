@@ -12,7 +12,7 @@ root_dir = "/home/jerms/data/maestro-v3.0.0"
 csv_name = "maestro-v3.0.0.csv"
 _SEED = 2021
 
-def mel_spec(audio):
+def mel_spec(y):
     # spectrogram = tfio.audio.spectrogram(
     #     audio, nfft=512, window=512, stride=256)
     # mel_spectrogram = tfio.audio.melscale(
