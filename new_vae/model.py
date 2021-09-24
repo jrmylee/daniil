@@ -249,7 +249,7 @@ class VAE:
     return x
 
 class EncoderOutputLayer(Layer):
-  def __init__(self, sample_point, name="encoder_output", **kwargs):
+  def __init__(self, name="encoder_output", **kwargs):
     super(EncoderOutputLayer, self).__init__(name=name, **kwargs)
 
   def call(self, args):
