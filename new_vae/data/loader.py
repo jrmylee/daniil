@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 import tensorflow as tf
+from audiomentations import Compose, AddGaussianNoise, TimeStretch, PitchShift, Shift
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -32,10 +33,20 @@ def get_dataset(csv, ds_dir=root_dir):
     dataset = tf.data.Dataset.from_tensor_slices((audio, midi))    
     return dataset
 
+def augment_audio(audio):
+    sr = 22050
+    augment = Compose([
+        AddGaussianNoise(min_amplitude=0.001, max_amplitude=0.15, p=0.5),
+        TimeStretch(min_rate=0.8, max_rate=1.25, p=0.5),
+        PitchShift(min_semitones=-4, max_semitones=4, p=0.5),
+        Shift(min_fraction=-0.5, max_fraction=0.5, p=0.5),
+    ])
+    return audio
+
 def load_audio(audio_filepath, midi_filepath):
     audio = tf.io.read_file(audio_filepath)
     audio, sample_rate = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=44100)
-    return audio, midi_filepath
+    return audio, augment_audio(audio)
 
 def prepare_for_training(ds, shuffle_buffer_size=1024, batch_size=64):
     # Randomly shuffle (file_path, label) dataset

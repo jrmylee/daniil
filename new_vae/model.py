@@ -62,11 +62,10 @@ class VAE:
                        metrics=[self._calculate_reconstruction_loss,
                                 self._calculate_kl_loss])
 
-  def train(self, x_train_pure, x_train_noised, batch_size, num_epochs, checkpoint_path):
+  def train(self, ds, batch_size, num_epochs, checkpoint_path):
     # checkpoint = ModelCheckpoint(checkpoint_path, monitor='loss', verbose=1,
     #                             save_best_only=True, mode='auto', period=1)
-    self.model.fit(x_train_noised,
-                   x_train_pure,
+    self.model.fit(ds,
                    batch_size=batch_size,
                    epochs=num_epochs,
                    shuffle=True)

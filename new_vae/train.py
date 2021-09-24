@@ -58,7 +58,7 @@ def generate_training_data(X_tr):
 
 
 # Train Section
-def train(x_train_pure, x_train_noised, learning_rate, batch_size, epochs, chkpt_pth): 
+def train(ds, learning_rate, batch_size, epochs, chkpt_pth): 
   vae = VAE(
       input_shape = (HOP_SIZE, TIME_AXIS_LENGTH * spec_split, 1),
       conv_filters=(512, 256, 128, 64, 32),
@@ -67,18 +67,16 @@ def train(x_train_pure, x_train_noised, learning_rate, batch_size, epochs, chkpt
       latent_space_dim = VECTOR_DIM
   )
   print("batch size: " + str(batch_size))
-  print(x_train_pure)
-  print(x_train_noised)
   vae.summary()
   vae.compile(learning_rate)
-  vae.train(x_train_pure, x_train_pure, None, epochs, chkpt_pth)
+  vae.train(ds, None, epochs, chkpt_pth)
   return vae
 
 def continue_training(checkpoint):
   vae = VAE.load(checkpoint)
   vae.summary()
   vae.compile(LEARNING_RATE)
-  vae.train(x_train_pure, x_train_noised, BATCH_SIZE,EPOCHS)
+  vae.train(x_train_pure, BATCH_SIZE,EPOCHS)
   return vae
 
 def load_model(checkpoint):
@@ -97,13 +95,12 @@ def load_model(checkpoint):
 # X_tr_pure = generate_training_data(X_raw_tr)
 # X_tr_noised = generate_training_date(X_noised_tr)
 
-X_train = get_training_set()
-X_train_noised = X_train.map(augment_audio)
+ds = get_training_set()
 
 training_run_name = "my_melspecvae_model"
 checkpoint_save_directory = "./saved_models/"
 
 current_time = get_time_stamp()
 
-vae = train(X_train, X_train_noised, LEARNING_RATE, BATCH_SIZE, EPOCHS, checkpoint_save_directory)
+vae = train(ds, LEARNING_RATE, BATCH_SIZE, EPOCHS, checkpoint_save_directory)
 vae.save(f"{checkpoint_save_directory}{training_run_name}_{current_time}_h{HOP_SIZE}_w{TIME_AXIS_LENGTH}_z{VECTOR_DIM}")
