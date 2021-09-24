@@ -66,7 +66,6 @@ class VAE:
     # checkpoint = ModelCheckpoint(checkpoint_path, monitor='loss', verbose=1,
     #                             save_best_only=True, mode='auto', period=1)
     self.model.fit(ds,
-                   batch_size=batch_size,
                    epochs=num_epochs,
                    shuffle=True,
                    steps_per_epoch=train_steps
