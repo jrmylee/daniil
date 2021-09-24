@@ -4,6 +4,7 @@ import tensorflow as tf
 from audiomentations import Compose, AddGaussianNoise, TimeStretch, PitchShift, Shift
 from preprocess import *
 import numpy as np
+import tensorflow_io as tfio
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
