@@ -58,7 +58,7 @@ def load_audio(audio_filepath, midi_filepath):
     audio = tf.io.read_file(audio_filepath)
     audio, sample_rate = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=44100)
 
-    spec_clean, spec_dirty = mel_spec(audio), mel_spec(augment(audio))
+    spec_clean, spec_dirty = mel_spec(audio), mel_spec(augment_audio(audio))
     return spec_clean, spec_dirty
 
 def prepare_for_training(ds, shuffle_buffer_size=1024, batch_size=64):
