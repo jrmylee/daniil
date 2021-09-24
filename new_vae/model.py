@@ -10,8 +10,6 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 import numpy as np
 import tensorflow as tf
 
-tf.compat.v1.disable_eager_execution()
-#tf.disable_v2_behavior()
 print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
 class VAE:
@@ -59,21 +57,15 @@ class VAE:
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     klDivergence = tf.keras.metrics.KLDivergence(name='kullback_leibler_divergence', dtype=None)
     
-    self.model.compile(optimizer=optimizer, loss=tf.keras.losses.BinaryCrossentropy(),
-                       metrics=[klDivergence])
+    self.model.compile(optimizer=optimizer, 
+                      loss=tf.keras.losses.BinaryCrossentropy(),
+                      metrics=[klDivergence])
 
-  def train(self, ds, batch_size, num_epochs, train_steps, checkpoint_path):
-    # checkpoint = ModelCheckpoint(checkpoint_path, monitor='loss', verbose=1,
-    #                             save_best_only=True, mode='auto', period=1)
-    self.model.fit(ds,
-                   epochs=num_epochs,
-                   shuffle=True
-                   )
-                  #  ,callbacks=[checkpoint])
+  def train(self, x, x_hat, batch_size, num_epochs, train_steps, checkpoint_path):
+    self.model.fit(x_hat, x, epochs=num_epochs, shuffle=True)
 
   def save(self, save_folder="."):
     print("Saving!")
-    self._create_folder_if_it_doesnt_exist(save_folder)
     self._save_parameters(save_folder)
     self._save_weights(save_folder)
 
@@ -98,26 +90,6 @@ class VAE:
       weights_path = os.path.join(save_folder, "weights.h5")
       autoencoder.load_weights(weights_path)
       return autoencoder
-
-  def _calculate_combined_loss(self, y_target, y_predicted):
-    reconstruction_loss = self._calculate_reconstruction_loss(y_target, y_predicted)
-    kl_loss = self._calculate_kl_loss(y_target, y_predicted)
-    combined_loss = self.reconstruction_loss_weight * reconstruction_loss + kl_loss
-    return combined_loss
-  
-  def _calculate_reconstruction_loss(self, y_target, y_predicted):
-    error = y_target - y_predicted
-    reconstruction_loss = K.mean(K.square(error), axis=[1, 2, 3])
-    return reconstruction_loss
-
-  def _calculate_kl_loss(self, y_target, y_predicted):
-    kl_loss = -0.5 * K.sum(1 + self.log_variance - K.square(self.mu) -
-                           K.exp(self.log_variance), axis =1)
-    return kl_loss
-
-  def _create_folder_if_it_doesnt_exist(self, folder):
-      if not os.path.exists(folder):
-          os.makedirs(folder)
 
   def _save_parameters(self, save_folder):
       parameters = [
