@@ -58,7 +58,7 @@ def generate_training_data(X_tr):
 
 
 # Train Section
-def train(ds, learning_rate, batch_size, epochs, chkpt_pth): 
+def train(ds, learning_rate, batch_size, epochs, train_steps, chkpt_pth): 
   vae = VAE(
       input_shape = (HOP_SIZE, TIME_AXIS_LENGTH * spec_split, 1),
       conv_filters=(512, 256, 128, 64, 32),
@@ -69,7 +69,7 @@ def train(ds, learning_rate, batch_size, epochs, chkpt_pth):
   print("batch size: " + str(batch_size))
   vae.summary()
   vae.compile(learning_rate)
-  vae.train(ds, None, epochs, chkpt_pth)
+  vae.train(ds, None, epochs, train_steps, chkpt_pth)
   return vae
 
 def continue_training(checkpoint):
@@ -95,12 +95,14 @@ def load_model(checkpoint):
 # X_tr_pure = generate_training_data(X_raw_tr)
 # X_tr_noised = generate_training_date(X_noised_tr)
 
-ds = get_training_set()
+df, ds = get_training_set()
 
 training_run_name = "my_melspecvae_model"
 checkpoint_save_directory = "./saved_models/"
 
 current_time = get_time_stamp()
 
-vae = train(ds, LEARNING_RATE, BATCH_SIZE, EPOCHS, checkpoint_save_directory)
+train_steps = len(df) / BATCH_SIZE
+
+vae = train(ds, LEARNING_RATE, BATCH_SIZE, EPOCHS, train_steps, checkpoint_save_directory)
 vae.save(f"{checkpoint_save_directory}{training_run_name}_{current_time}_h{HOP_SIZE}_w{TIME_AXIS_LENGTH}_z{VECTOR_DIM}")

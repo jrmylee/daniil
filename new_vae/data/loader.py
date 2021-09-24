@@ -20,7 +20,7 @@ def get_training_set():
     batch_size = 64
     train_steps = len(df) / batch_size
     
-    return train_ds
+    return df, train_ds
 
 def get_dataset(csv, ds_dir=root_dir):
     audio_filenames, midi_filenames = [], []
