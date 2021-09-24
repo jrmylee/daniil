@@ -67,8 +67,7 @@ class VAE:
     #                             save_best_only=True, mode='auto', period=1)
     self.model.fit(ds,
                    epochs=num_epochs,
-                   shuffle=True,
-                   steps_per_epoch=train_steps
+                   shuffle=True
                    )
                   #  ,callbacks=[checkpoint])
 
