@@ -5,7 +5,6 @@ import pickle
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Input, Conv2D, ReLU, BatchNormalization, Flatten, Dense, Reshape, Conv2DTranspose, Activation, Lambda
 from tensorflow.keras import backend as K
-from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import MeanSquaredError
 from tensorflow.keras.callbacks import ModelCheckpoint
 import numpy as np
@@ -57,12 +56,11 @@ class VAE:
     self._build_autoencoder()
 
   def compile(self, learning_rate=0.0001):
-    optimizer = Adam(learning_rate=learning_rate)
-    self.model.compile(optimizer=optimizer, loss=self._calculate_combined_loss,
-                       metrics=[self._calculate_reconstruction_loss,
-                                tf.keras.metrics.KLDivergence(
-                                    name='kullback_leibler_divergence', dtype=None
-                                )])
+    optimizer = tf.keras.optimizer.Adam(learning_rate=learning_rate)
+    klDivergence = tf.keras.metrics.KLDivergence(name='kullback_leibler_divergence', dtype=None)
+    
+    self.model.compile(optimizer=optimizer, loss=tf.keras.losses.BinaryCrossentropy(),
+                       metrics=[self._calculate_reconstruction_loss,klDivergence])
 
   def train(self, ds, batch_size, num_epochs, train_steps, checkpoint_path):
     # checkpoint = ModelCheckpoint(checkpoint_path, monitor='loss', verbose=1,
