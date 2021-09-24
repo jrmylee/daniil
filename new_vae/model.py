@@ -255,12 +255,12 @@ class VAE:
 
 class EncoderOutputLayer(Layer):
   def __init__(self, sample_point, name="encoder_output", **kwargs):
-        super(EncoderOutputLayer, self).__init__(name=name, **kwargs)
-        self.sample_point = tf.Variable(sample_point)
+    super(EncoderOutputLayer, self).__init__(name=name, **kwargs)
+    self.sample_point = tf.Variable(sample_point)
 
-    def call(self, dummy):
-        return self.sample_point
+  def call(self, dummy):
+    return self.sample_point
 
-    def get_config(self):
-        config = super(EncoderOutputLayer, self).get_config()
-        return config
+  def get_config(self):
+    config = super(EncoderOutputLayer, self).get_config()
+    return config
