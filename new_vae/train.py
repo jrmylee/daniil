@@ -96,6 +96,6 @@ checkpoint_save_directory = "./saved_models/"
 
 # train_steps = len(df) / BATCH_SIZE
 
-vae = train([], [], LEARNING_RATE, BATCH_SIZE, EPOCHS, train_steps, checkpoint_save_directory)
+vae = train([], [], LEARNING_RATE, BATCH_SIZE, EPOCHS, 20, checkpoint_save_directory)
 vae.save(f"{checkpoint_save_directory}{training_run_name}_{current_time}_h{HOP_SIZE}_w{TIME_AXIS_LENGTH}_z{VECTOR_DIM}")
 
