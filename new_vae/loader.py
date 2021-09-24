@@ -19,7 +19,7 @@ def mel_spec(y):
     #     spectrogram, rate=22050, mels=256, fmin=0, fmax=8000)
     # return mel_spectrogram
 
-    mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, hop_length=256)
+    mel_spec = librosa.feature.melspectrogram(y=y, sr=22050, hop_length=256)
     return tf.convert_to_tensor(mel_spec)
 
 
