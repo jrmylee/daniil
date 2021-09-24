@@ -52,7 +52,7 @@ def load_raw_data():
 # Train Section
 def train(ds, learning_rate, batch_size, epochs, train_steps, chkpt_pth): 
   vae = VAE(
-      input_shape = (HOP_SIZE, TIME_AXIS_LENGTH * spec_split, 1),
+      input_shape = (TIME_AXIS_LENGTH, HOP_SIZE, 1),
       conv_filters=(512, 256, 128, 64, 32),
       conv_kernels=(3, 3, 3, 3, 3),
       conv_strides=(2, 2, 2, 2, (2,1)),

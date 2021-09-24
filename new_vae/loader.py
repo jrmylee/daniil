@@ -16,7 +16,7 @@ def mel_spec(audio):
     spectrogram = tfio.audio.spectrogram(
         audio, nfft=512, window=512, stride=256)
     mel_spectrogram = tfio.audio.melscale(
-        spectrogram, rate=16000, mels=128, fmin=0, fmax=8000)
+        spectrogram, rate=22050, mels=256, fmin=0, fmax=8000)
     return mel_spectrogram
 
 
@@ -60,7 +60,10 @@ def load_audio(audio_filepath, midi_filepath):
     audio = tf.reshape(audio, (44100, ))
     
     spec_clean, spec_dirty = mel_spec(audio), mel_spec(augment_audio(audio))
+    paddings = tf.constant([[0, 3], [0,0]])
+    spec_clean, spec_dirty = tf.pad(spec_clean, paddings, "CONSTANT"), tf.pad(spec_dirty, paddings, "CONSTANT")
     spec_clean, spec_dirty = tf.expand_dims(spec_clean, -1), tf.expand_dims(spec_dirty, -1)
+    
     return spec_clean, spec_dirty
 
 def prepare_for_training(ds, shuffle_buffer_size=1024, batch_size=64):
