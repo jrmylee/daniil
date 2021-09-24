@@ -36,7 +36,7 @@ def get_training_set():
 def get_dataset(csv, ds_dir=root_dir):
     audio_filenames, midi_filenames = [], []
     for index, row in csv.iterrows():
-        audio, midi = row["audio_filename"], row["midi_filename"]
+        audio, midi = os.path.join(ds_dir, row["audio_filename"]), os.path.join(ds_dir, row["midi_filename"])
         audio_filenames.append(audio)
         midi_filenames.append(midi)
     
