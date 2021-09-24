@@ -18,7 +18,7 @@ def mel_spec(y):
     # mel_spectrogram = tfio.audio.melscale(
     #     spectrogram, rate=22050, mels=256, fmin=0, fmax=8000)
     # return mel_spectrogram
-
+    y = y.numpy()
     mel_spec = librosa.feature.melspectrogram(y=y, sr=22050, hop_length=256)
     return tf.convert_to_tensor(mel_spec)
 
