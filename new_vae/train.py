@@ -69,7 +69,7 @@ def train(ds, learning_rate, batch_size, epochs, train_steps, chkpt_pth):
   print("batch size: " + str(batch_size))
   vae.summary()
   vae.compile(learning_rate)
-  vae.train(ds, None, epochs, train_steps, chkpt_pth)
+  vae.train(ds, 64, epochs, train_steps, chkpt_pth)
   return vae
 
 def continue_training(checkpoint):
