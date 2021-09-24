@@ -74,7 +74,7 @@ def prepare_for_training(ds, shuffle_buffer_size=1024, batch_size=64):
     ds = ds.shuffle(buffer_size=shuffle_buffer_size)
     # Load and decode audio from file paths
     ds = ds.map(lambda x, y: tf.py_function(func=load_audio,
-          inp=[x, y]))
+          inp=[x, y], Tout=tf.float32))
     # Prepare batches
     ds = ds.batch(batch_size, drop_remainder=True)
 
