@@ -96,6 +96,19 @@ checkpoint_save_directory = "./saved_models/"
 
 # train_steps = len(df) / BATCH_SIZE
 
-vae = train([], [], LEARNING_RATE, BATCH_SIZE, EPOCHS, 20, checkpoint_save_directory)
+vae = VAE(
+      input_shape = (TIME_AXIS_LENGTH, HOP_SIZE, 1),
+    conv_filters=(512, 256, 128, 64, 32),
+    conv_kernels=(3, 3, 3, 3, 3),
+    conv_strides=(2, 2, 2, 2, (2,1)),
+    latent_space_dim = VECTOR_DIM
+)
+vae.summary()
+vae.compile(LEARNING_RATE)
+
+for batch in ds:
+  x, x_hat = batch
+  vae.train(x, x_hat, 64, epochs, train_steps, chkpt_pth)
+
 vae.save(f"{checkpoint_save_directory}{training_run_name}_{current_time}_h{HOP_SIZE}_w{TIME_AXIS_LENGTH}_z{VECTOR_DIM}")
 
