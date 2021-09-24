@@ -242,26 +242,21 @@ class VAE:
     self.log_variance = Dense(self.latent_space_dim,
                               name="log_variance")(x)
     
-    def sample_point_from_normal_distribution(args):
-      mu, log_variance = args
-      epsilon = K.random_normal(shape=K.shape(self.mu), mean=0., 
-                                stddev=1.)
-      sampled_point = mu + K.exp(log_variance / 2) * epsilon
-
-      return sampled_point
 
     # x = Lambda(sample_point_from_normal_distribution, 
     #            name="encoder_output")()
-    x = EncoderOutputLayer(sample_point_from_normal_distribution)([self.mu, self.log_variance])
+    x = EncoderOutputLayer()([self.mu, self.log_variance])
     return x
 
 class EncoderOutputLayer(Layer):
   def __init__(self, sample_point, name="encoder_output", **kwargs):
     super(EncoderOutputLayer, self).__init__(name=name, **kwargs)
-    self.sample_point = tf.Variable(sample_point)
 
-  def call(self, mu_and_var):
-    return self.sample_point(mu_and_var)
+  def call(self, args):
+    mu, log_variance = args
+    epsilon = K.random_normal(shape=K.shape(mu), mean=0., stddev=1.)
+    sampled_point = mu + K.exp(log_variance / 2) * epsilon
+    return sampled_point
 
   def get_config(self):
     config = super(EncoderOutputLayer, self).get_config()
