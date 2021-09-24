@@ -106,7 +106,7 @@ vae = VAE(
 vae.summary()
 vae.compile(LEARNING_RATE)
 
-for epoch in EPOCHS:
+for epoch in range(EPOCHS):
   print(str(epoch) + " epoch starts")
   i = 0
   for batch in ds:
