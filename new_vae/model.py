@@ -10,7 +10,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 import numpy as np
 import tensorflow as tf
 
-# tf.compat.v1.disable_eager_execution()
+tf.compat.v1.disable_eager_execution()
 #tf.disable_v2_behavior()
 print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
 
@@ -250,17 +250,19 @@ class VAE:
 
       return sampled_point
 
+    # x = Lambda(sample_point_from_normal_distribution, 
+    #            name="encoder_output")()
     x = EncoderOutputLayer(sample_point_from_normal_distribution)([self.mu, self.log_variance])
     return x
 
 class EncoderOutputLayer(Layer):
   def __init__(self, sample_point, name="encoder_output", **kwargs):
-    super(EncoderOutputLayer, self).__init__(name=name, **kwargs)
-    self.sample_point = tf.Variable(sample_point)
+        super(EncoderOutputLayer, self).__init__(name=name, **kwargs)
+        self.sample_point = sample_point
 
-  def call(self, dummy):
-    return self.sample_point
+    def call(self, mu_and_var):
+        return self.sample_point(mu_and_var)
 
-  def get_config(self):
-    config = super(EncoderOutputLayer, self).get_config()
-    return config
+    def get_config(self):
+        config = super(EncoderOutputLayer, self).get_config()
+        return config
