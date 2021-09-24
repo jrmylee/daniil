@@ -57,7 +57,7 @@ def augment_audio(audio):
 def load_audio(audio_filepath, midi_filepath):
     audio = tf.io.read_file(audio_filepath)
     audio, sample_rate = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=44100)
-
+    audio = tf.reshape(audio, (44100, ))
     spec_clean, spec_dirty = mel_spec(audio), mel_spec(augment_audio(audio))
     return spec_clean, spec_dirty
 
