@@ -4,7 +4,7 @@ import tensorflow as tf
 from audiomentations import Compose, AddGaussianNoise, TimeStretch, PitchShift, Shift
 from preprocess import *
 import numpy as np
-import tensorflow_io as tfio
+import librosa
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -13,11 +13,14 @@ csv_name = "maestro-v3.0.0.csv"
 _SEED = 2021
 
 def mel_spec(audio):
-    spectrogram = tfio.audio.spectrogram(
-        audio, nfft=512, window=512, stride=256)
-    mel_spectrogram = tfio.audio.melscale(
-        spectrogram, rate=22050, mels=256, fmin=0, fmax=8000)
-    return mel_spectrogram
+    # spectrogram = tfio.audio.spectrogram(
+    #     audio, nfft=512, window=512, stride=256)
+    # mel_spectrogram = tfio.audio.melscale(
+    #     spectrogram, rate=22050, mels=256, fmin=0, fmax=8000)
+    # return mel_spectrogram
+
+    mel_spec = librosa.feature.melspectrogram(y=y, sr=sr, hop_length=256)
+    return tf.convert_to_tensor(mel_spec)
 
 
 def get_training_set():
@@ -60,7 +63,7 @@ def load_audio(audio_filepath, midi_filepath):
     audio = tf.reshape(audio, (44100, ))
     
     spec_clean, spec_dirty = mel_spec(audio), mel_spec(augment_audio(audio))
-    paddings = tf.constant([[0, 3], [0,0]])
+    paddings = tf.constant([[0, 0], [0,3]])
     spec_clean, spec_dirty = tf.pad(spec_clean, paddings, "CONSTANT"), tf.pad(spec_dirty, paddings, "CONSTANT")
     spec_clean, spec_dirty = tf.expand_dims(spec_clean, -1), tf.expand_dims(spec_dirty, -1)
     
