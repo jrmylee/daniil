@@ -19,7 +19,7 @@ REF_LEVEL_DB = training_params['ref_level_db']
 TIME_AXIS_LENGTH = training_params['time_axis_length']
 spec_split = 1
 
-from preprocess import *
+# from preprocess import *
 from augment import augment_audio
 from model import *
 from loader import get_training_set
@@ -52,7 +52,7 @@ def load_raw_data():
 # Train Section
 def train(x, x_hat, learning_rate, batch_size, epochs, train_steps, chkpt_pth): 
   vae = VAE(
-      input_shape = (TIME_AXIS_LENGTH, HOP_SIZE, 1),
+      input_shape = (192, HOP_SIZE, 1),
       conv_filters=(512, 256, 128, 64, 32),
       conv_kernels=(3, 3, 3, 3, 3),
       conv_strides=(2, 2, 2, 2, (2,1)),
@@ -87,7 +87,7 @@ def load_model(checkpoint):
 # X_tr_pure = generate_training_data(X_raw_tr)
 # X_tr_noised = generate_training_date(X_noised_tr)
 
-df, ds = get_training_set()
+# df, ds = get_training_set()
 
 training_run_name = "my_melspecvae_model"
 checkpoint_save_directory = "./saved_models/"
@@ -106,14 +106,14 @@ vae = VAE(
 vae.summary()
 vae.compile(LEARNING_RATE)
 
-for epoch in range(EPOCHS):
-  print(str(epoch) + " epoch starts")
-  i = 0
-  for batch in ds:
-    print(str(i) + "-th batch")
-    x, x_hat = batch
-    vae.train(x, x_hat, 64, EPOCHS, checkpoint_save_directory)
-    i += 1
+# for epoch in range(EPOCHS):
+#   print(str(epoch) + " epoch starts")
+#   i = 0
+#   for batch in ds:
+#     print(str(i) + "-th batch")
+#     x, x_hat = batch
+#     vae.train(x, x_hat, 64, EPOCHS, checkpoint_save_directory)
+#     i += 1
 
 vae.save(f"{checkpoint_save_directory}{training_run_name}_{current_time}_h{HOP_SIZE}_w{TIME_AXIS_LENGTH}_z{VECTOR_DIM}")
 
