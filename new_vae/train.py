@@ -87,7 +87,7 @@ def load_model(checkpoint):
 # X_tr_pure = generate_training_data(X_raw_tr)
 # X_tr_noised = generate_training_date(X_noised_tr)
 
-# df, ds = get_training_set()
+df, ds = get_training_set()
 
 training_run_name = "my_melspecvae_model"
 checkpoint_save_directory = "./saved_models/"
@@ -97,7 +97,7 @@ checkpoint_save_directory = "./saved_models/"
 # train_steps = len(df) / BATCH_SIZE
 
 vae = VAE(
-      input_shape = (TIME_AXIS_LENGTH, HOP_SIZE, 1),
+      input_shape = (192, HOP_SIZE, 1),
     conv_filters=(512, 256, 128, 64, 32),
     conv_kernels=(3, 3, 3, 3, 3),
     conv_strides=(2, 2, 2, 2, (2,1)),
