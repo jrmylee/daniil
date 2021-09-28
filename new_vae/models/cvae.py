@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 class CVAE(tf.keras.Model):
     """Convolutional variational autoencoder."""
