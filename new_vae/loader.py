@@ -14,6 +14,8 @@ root_dir = "/home/jerms/data/maestro-v3.0.0"
 csv_name = "maestro-v3.0.0.csv"
 _SEED = 2021
 
+spectrogram_dir = "/home/jerms/disk1/spectrograms"
+
 hparams = HParams(  
     # spectrogramming
     win_length = 2048,
@@ -85,28 +87,24 @@ def get_feature(audio):
     mel_spectrogram = mel_spec(spectrogram, hparams)
     return mel_spectrogram
 
-def get_training_set():
-    csv_dir = os.path.join(root_dir, csv_name)
-    
-    df = pd.read_csv(csv_dir)
-    ds = get_dataset(df)
-    
+def get_training_set():    
+    ds = get_dataset()
+  
     train_ds, test_ds = get_train_test_set(ds)
 
     batch_size = 64
-    train_steps = len(df) / batch_size
     
-    return df, train_ds, test_ds
+    return train_ds, test_ds
 
-def get_dataset(csv, ds_dir=root_dir):
-    audio_filenames, midi_filenames = [], []
-    for index, row in csv.iterrows():
-        audio, midi = os.path.join(ds_dir, row["audio_filename"]), os.path.join(ds_dir, row["midi_filename"])
-        audio_filenames.append(audio)
-        midi_filenames.append(midi)
+def get_spectrogram_files(save_path):
+    onlyfiles = [os.path.join(save_path,f) for f in os.listdir(save_path) if os.path.isfile(os.path.join(save_path, f))]
+    return onlyfiles
+
+def get_dataset(ds_dir=spectrogram_dir):
+    files = get_spectrogram_files(ds_dir)
     
-    audio, midi = tf.constant(audio_filenames), tf.constant(midi_filenames)
-    dataset = tf.data.Dataset.from_tensor_slices((audio, midi))    
+    specs = tf.constant(files)
+    dataset = tf.data.Dataset.from_tensor_slices(specs)    
     return dataset
 
 def augment_audio(audio):
@@ -119,19 +117,23 @@ def augment_audio(audio):
     ])
     return augment(audio)
 
-def load_audio(audio_filepath, midi_filepath):
-    print("loading audio")
-    audio = tf.io.read_file(audio_filepath)
-    audio, sample_rate = tf.audio.decode_wav(audio, desired_channels=1, desired_samples=44100 * 2)
-    audio = tfio.audio.resample(audio, 44100, 22050)
-    audio = tf.reshape(audio, (22050 * 2, ))
-    
-    spec_clean, spec_dirty = get_feature(audio), [] # mel_spec(augment_audio(audio))
-    paddings = tf.constant([[0, 3], [0,0]])
+def read_npy_file(item):
+    data = np.load(item.decode())
+    return data.astype(np.float32)
+
+def load_audio(audio_filepath):
+    print("loading spectrogram")
+    spec_clean = tf.numpy_function(read_npy_file, [audio_filepath], [tf.float32])
+    paddings = tf.constant([[0,0], [0, 3], [0,0]])
     spec_clean, spec_dirty = tf.pad(spec_clean, paddings, "CONSTANT"), [] #tf.pad(spec_dirty, paddings, "CONSTANT")
-    spec_clean, spec_dirty = tf.expand_dims(spec_clean, -1), [] #tf.expand_dims(spec_dirty, -1)
-    
-    return spec_clean, audio_filepath
+    shape = spec_clean.shape
+    if(hasattr(shape, 'numpy')):
+        print("has shape")
+    else:
+        print("not shape")
+
+    spec_clean = tf.reshape(spec_clean, (176, 256, 1))
+    return spec_clean
 
 def get_train_test_set(ds, shuffle_buffer_size=1024, batch_size=64):
     test_ds = ds.take(200) 

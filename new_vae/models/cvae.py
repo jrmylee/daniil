@@ -76,7 +76,7 @@ class CVAE(tf.keras.Model):
         gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
         
-        return {"loss" : loss.result()}
+        return {"loss" : loss}
     
     @tf.function
     def sample(self, eps=None):
