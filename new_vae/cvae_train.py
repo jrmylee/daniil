@@ -29,7 +29,7 @@ for epoch in range(1, epochs + 1):
     for train_x in train_dataset:
         i += 1
         model.fit(train_x, batch_size=16)
-        if i == 1000:
+        if i == 2500:
             break
     end_time = time.time()
 

@@ -1,0 +1,2 @@
+model_checkpoint_path: "vqvae_run_128_128"
+all_model_checkpoint_paths: "vqvae_run_128_128"

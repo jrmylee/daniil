@@ -45,17 +45,14 @@ def mel_spec(spectrogram, hparams):
         dtype=tf.dtypes.float32,
         name=None,
     )
-    print(mel_matrix.shape)
     mel_f = mel_frequencies(
         n_mels=hparams.num_mel_bins + 2,
         fmin=hparams.mel_lower_edge_hertz,
         fmax=hparams.mel_upper_edge_hertz,
     )
-    print(mel_f.shape)
     enorm = tf.dtypes.cast(
         tf.expand_dims(tf.constant(2.0 / (mel_f[2 : hparams.num_mel_bins + 2] - mel_f[:hparams.num_mel_bins])), 0),
         tf.float32)
-    print(enorm.shape)
     mel_matrix = tf.multiply(mel_matrix, enorm)
     mel_matrix = tf.divide(mel_matrix, tf.reduce_sum(mel_matrix, axis=0))
     mel_spectrogram = tf.tensordot(spectrogram,mel_matrix, 1)
@@ -97,43 +94,38 @@ def get_training_set():
     return train_ds, test_ds
 
 def get_spectrogram_files(save_path):
-    onlyfiles = [os.path.join(save_path,f) for f in os.listdir(save_path) if os.path.isfile(os.path.join(save_path, f))]
+    onlyfiles = [f for f in os.listdir(save_path) if os.path.isfile(os.path.join(save_path, f))]
     return onlyfiles
 
 def get_dataset(ds_dir=spectrogram_dir):
     files = get_spectrogram_files(ds_dir)
+    aug_files = [os.path.join(ds_dir, "aug", f) for f in files]
+    files = [os.path.join(ds_dir, f) for f in files]
     
-    specs = tf.constant(files)
-    dataset = tf.data.Dataset.from_tensor_slices(specs)    
+    
+    files = tf.constant(files)
+    aug_files = tf.constant(aug_files)
+    
+    dataset = tf.data.Dataset.from_tensor_slices((files, aug_files))    
     return dataset
-
-def augment_audio(audio):
-    sr = 22050
-    augment = Compose([
-        AddGaussianNoise(min_amplitude=0.001, max_amplitude=0.15, p=0.5),
-        TimeStretch(min_rate=0.8, max_rate=1.25, p=0.5),
-        PitchShift(min_semitones=-4, max_semitones=4, p=0.5),
-        Shift(min_fraction=-0.5, max_fraction=0.5, p=0.5),
-    ])
-    return augment(audio)
 
 def read_npy_file(item):
     data = np.load(item.decode())
     return data.astype(np.float32)
 
-def load_audio(audio_filepath):
+def load_audio(spec_filepath, dirty_spec_filepath):
     print("loading spectrogram")
-    spec_clean = tf.numpy_function(read_npy_file, [audio_filepath], [tf.float32])
+    spec_clean = tf.numpy_function(read_npy_file, [spec_filepath], [tf.float32])
+    spec_dirty = tf.numpy_function(read_npy_file, [dirty_spec_filepath], [tf.float32])
+    
     paddings = tf.constant([[0,0], [0, 3], [0,0]])
-    spec_clean, spec_dirty = tf.pad(spec_clean, paddings, "CONSTANT"), [] #tf.pad(spec_dirty, paddings, "CONSTANT")
-    shape = spec_clean.shape
-    if(hasattr(shape, 'numpy')):
-        print("has shape")
-    else:
-        print("not shape")
+    spec_clean = tf.pad(spec_clean, paddings, "CONSTANT")
+    spec_dirty = tf.pad(spec_dirty, paddings, "CONSTANT")
 
     spec_clean = tf.reshape(spec_clean, (176, 256, 1))
-    return spec_clean
+    spec_dirty = tf.reshape(spec_dirty, (176, 256, 1))
+    
+    return spec_clean, spec_dirty
 
 def get_train_test_set(ds, shuffle_buffer_size=1024, batch_size=64):
     test_ds = ds.take(200) 
