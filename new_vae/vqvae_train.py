@@ -15,13 +15,13 @@ for epoch in range(1, epochs + 1):
     print("epoch: " + str(epoch))
     start_time = time.time()
     i = 0
-    for train_x in train_dataset:
+    for train_x, train_x_ in train_dataset:
         i += 1
-        vqvae_trainer.fit(train_x)
+        vqvae_trainer.fit(train_x, train_x_)
         if i == 5000:
             break
     end_time = time.time()
 
     print(end_time)
 
-vqvae_trainer.save_weights("/home/jerms/daniil/new_vae/saved_models/vqvae_run_128_128")
+vqvae_trainer.save_weights("/home/jerms/daniil/new_vae/saved_models/vqvae_run_128_128_2")
