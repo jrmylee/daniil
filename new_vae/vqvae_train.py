@@ -3,25 +3,20 @@ import tensorflow as tf
 import time
 from loader import get_training_set
 import numpy as np
+import datetime
 
 train_dataset, test_dataset = get_training_set()
 epochs = 10
+batch_size=64
 # set the dimensionality of the latent space to a plane for visualization later
 
 vqvae_trainer = VQVAETrainer(latent_dim=128, num_embeddings=128)
 vqvae_trainer.compile(optimizer=keras.optimizers.Adam())
 
-for epoch in range(1, epochs + 1):
-    print("epoch: " + str(epoch))
-    start_time = time.time()
-    i = 0
-    for train_x, train_x_ in train_dataset:
-        i += 1
-        vqvae_trainer.fit(train_x, train_x_)
-        if i == 5000:
-            break
-    end_time = time.time()
+log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-    print(end_time)
+print("training")
+vqvae_trainer.fit(train_dataset, epochs=10, callbacks=[tensorboard_callback])
 
-vqvae_trainer.save_weights("/home/jerms/daniil/new_vae/saved_models/vqvae_run_128_128_2")
+vqvae_trainer.save_weights("/home/jerms/daniil/new_vae/saved_models/vqvae_run_stft_2")

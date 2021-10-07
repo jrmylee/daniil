@@ -14,7 +14,7 @@ root_dir = "/home/jerms/data/maestro-v3.0.0"
 csv_name = "maestro-v3.0.0.csv"
 _SEED = 2021
 
-spectrogram_dir = "/home/jerms/disk1/spectrograms"
+spectrogram_dir = "/home/jerms/disk1/stft_original"
 
 hparams = HParams(  
     # spectrogramming
@@ -99,33 +99,31 @@ def get_spectrogram_files(save_path):
 
 def get_dataset(ds_dir=spectrogram_dir):
     files = get_spectrogram_files(ds_dir)
-    aug_files = [os.path.join(ds_dir, "aug", f) for f in files]
+#     aug_files = [os.path.join(ds_dir, "aug", f) for f in files]
     files = [os.path.join(ds_dir, f) for f in files]
     
     
     files = tf.constant(files)
-    aug_files = tf.constant(aug_files)
+#     aug_files = tf.constant(aug_files)
     
-    dataset = tf.data.Dataset.from_tensor_slices((files, aug_files))    
+    dataset = tf.data.Dataset.from_tensor_slices(files)    
     return dataset
 
 def read_npy_file(item):
     data = np.load(item.decode())
+    data = data[:-1, :, :]
+    data = np.pad(data, ((0,0), (0,1), (0,0)), 'constant')
     return data.astype(np.float32)
 
-def load_audio(spec_filepath, dirty_spec_filepath):
+def load_audio(spec_filepath):
     print("loading spectrogram")
-    spec_clean = tf.numpy_function(read_npy_file, [spec_filepath], [tf.float32])
-    spec_dirty = tf.numpy_function(read_npy_file, [dirty_spec_filepath], [tf.float32])
+    transform_clean = tf.numpy_function(read_npy_file, [spec_filepath], [tf.float32])
+#     spec_dirty = tf.numpy_function(read_npy_file, [dirty_spec_filepath], [tf.float32])
     
-    paddings = tf.constant([[0,0], [0, 3], [0,0]])
-    spec_clean = tf.pad(spec_clean, paddings, "CONSTANT")
-    spec_dirty = tf.pad(spec_dirty, paddings, "CONSTANT")
-
-    spec_clean = tf.reshape(spec_clean, (176, 256, 1))
-    spec_dirty = tf.reshape(spec_dirty, (176, 256, 1))
+#     spec_dirty = tf.pad(spec_dirty, paddings, "CONSTANT")
+#     spec_dirty = tf.reshape(spec_dirty, (176, 256, 1))
     
-    return spec_clean, spec_dirty
+    return transform_clean
 
 def get_train_test_set(ds, shuffle_buffer_size=1024, batch_size=64):
     test_ds = ds.take(200) 
@@ -137,5 +135,6 @@ def get_train_test_set(ds, shuffle_buffer_size=1024, batch_size=64):
     test_ds = test_ds.shuffle(buffer_size=shuffle_buffer_size)
     test_ds = test_ds.map(load_audio, num_parallel_calls=AUTOTUNE)
     test_ds = test_ds.batch(batch_size, drop_remainder=True)
-            
+    train_ds = train_ds.prefetch(tf.data.AUTOTUNE)
+    test_ds = test_ds.prefetch(tf.data.AUTOTUNE)
     return train_ds, test_ds

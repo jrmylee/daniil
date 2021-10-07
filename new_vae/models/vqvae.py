@@ -65,33 +65,36 @@ class VectorQuantizer(layers.Layer):
         return encoding_indices
 
 def get_encoder(latent_dim=128):
-    encoder_inputs = keras.Input(shape=(176, 256, 1))
-    x = layers.Conv2D(32, 3, activation="relu", strides=2, padding="same")(
+    encoder_inputs = keras.Input(shape=(1024, 88, 2))
+    x = layers.Conv2D(32, 3, activation="relu", strides=(2,2), padding="same")(
         encoder_inputs
     )
-    x = layers.Conv2D(64, 3, activation="relu", strides=2, padding="same")(x)
-    x = layers.Conv2D(128, 3, activation="relu", strides=2, padding="same")(x)
-    x = layers.Conv2D(256, 3, activation="relu", strides=2, padding="same")(x)
+    x = layers.Conv2D(64, 3, activation="relu", strides=(2,2), padding="same")(x)
+    x = layers.Conv2D(128, 3, activation="relu", strides=(2,2), padding="same")(x)
+    x = layers.Conv2D(256, 3, activation="relu", strides=(2,1), padding="same")(x)
+    x = layers.Conv2D(512, 3, activation="relu", strides=(2,1), padding="same")(x)
+    
     encoder_outputs = layers.Conv2D(latent_dim, 1, padding="same")(x)
     return keras.Model(encoder_inputs, encoder_outputs, name="encoder")
 
 
 def get_decoder(latent_dim=128):
     latent_inputs = keras.Input(shape=get_encoder().output.shape[1:])
-    x = layers.Conv2DTranspose(256, 3, activation="relu", strides=2, padding="same")(
+    x = layers.Conv2DTranspose(512, 3, activation="relu", strides=[2,1], padding="same")(
         latent_inputs
     )
+    x = layers.Conv2DTranspose(256, 3, activation="relu", strides=[2,1], padding="same")(x)
     x = layers.Conv2DTranspose(128, 3, activation="relu", strides=2, padding="same")(x)
     x = layers.Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(x)
     x = layers.Conv2DTranspose(32, 3, activation="relu", strides=2, padding="same")(x)
-    decoder_outputs = layers.Conv2DTranspose(1, 3, padding="same")(x)
+    decoder_outputs = layers.Conv2DTranspose(2, 3, padding="same")(x)
     return keras.Model(latent_inputs, decoder_outputs, name="decoder")
 
 def get_vqvae(latent_dim=128, num_embeddings=128):
     vq_layer = VectorQuantizer(num_embeddings, latent_dim, name="vector_quantizer")
     encoder = get_encoder(latent_dim)
     decoder = get_decoder(latent_dim)
-    inputs = keras.Input(shape=(176, 256, 1))
+    inputs = keras.Input(shape=(1024, 88, 2))
     encoder_outputs = encoder(inputs)
     quantized_latents = vq_layer(encoder_outputs)
     reconstructions = decoder(quantized_latents)
@@ -119,11 +122,10 @@ class VQVAETrainer(keras.models.Model):
             self.vq_loss_tracker,
         ]
 
-    def train_step(self, data):
-        x, x_ = data
+    def train_step(self, x):
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
-            reconstructions = self.vqvae(x_)
+            reconstructions = self.vqvae(x)
 
             # Calculate the losses.
             reconstruction_loss = (
