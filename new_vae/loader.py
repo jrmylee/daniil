@@ -111,8 +111,10 @@ def get_dataset(ds_dir=spectrogram_dir):
 
 def read_npy_file(item):
     data = np.load(item.decode())
-    data = data[:-1, :, :]
+    data = data[:-1, :, :-1] # only get magnitude
     data = np.pad(data, ((0,0), (0,1), (0,0)), 'constant')
+    data = librosa.amplitude_to_db(data, ref=np.max)
+    data = (-1 * data) / 80
     return data.astype(np.float32)
 
 def load_audio(spec_filepath):

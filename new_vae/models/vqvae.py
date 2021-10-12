@@ -64,22 +64,22 @@ class VectorQuantizer(layers.Layer):
         encoding_indices = tf.argmin(distances, axis=1)
         return encoding_indices
 
-def get_encoder(latent_dim=128):
-    encoder_inputs = keras.Input(shape=(1024, 88, 2))
+def get_encoder(latent_dim):
+    encoder_inputs = keras.Input(shape=(1024, 88, 1))
     x = layers.Conv2D(32, 3, activation="relu", strides=(2,2), padding="same")(
         encoder_inputs
-    )
-    x = layers.Conv2D(64, 3, activation="relu", strides=(2,2), padding="same")(x)
-    x = layers.Conv2D(128, 3, activation="relu", strides=(2,2), padding="same")(x)
-    x = layers.Conv2D(256, 3, activation="relu", strides=(2,1), padding="same")(x)
-    x = layers.Conv2D(512, 3, activation="relu", strides=(2,1), padding="same")(x)
+    ) # (512, 44, 1)
+    x = layers.Conv2D(64, 3, activation="relu", strides=(2,2), padding="same")(x) # (256, 22, 1)
+    x = layers.Conv2D(128, 3, activation="relu", strides=(2,2), padding="same")(x) # (128, 11, 1)
+    x = layers.Conv2D(256, 3, activation="relu", strides=(2,1), padding="same")(x) # (64, 11, 1)
+    x = layers.Conv2D(512, 3, activation="relu", strides=(2,1), padding="same")(x) # (32 ,11, 1)
     
     encoder_outputs = layers.Conv2D(latent_dim, 1, padding="same")(x)
     return keras.Model(encoder_inputs, encoder_outputs, name="encoder")
 
 
-def get_decoder(latent_dim=128):
-    latent_inputs = keras.Input(shape=get_encoder().output.shape[1:])
+def get_decoder(latent_dim):
+    latent_inputs = keras.Input(shape=get_encoder(latent_dim).output.shape[1:])
     x = layers.Conv2DTranspose(512, 3, activation="relu", strides=[2,1], padding="same")(
         latent_inputs
     )
@@ -90,18 +90,18 @@ def get_decoder(latent_dim=128):
     decoder_outputs = layers.Conv2DTranspose(2, 3, padding="same")(x)
     return keras.Model(latent_inputs, decoder_outputs, name="decoder")
 
-def get_vqvae(latent_dim=128, num_embeddings=128):
+def get_vqvae(latent_dim, num_embeddings):
     vq_layer = VectorQuantizer(num_embeddings, latent_dim, name="vector_quantizer")
     encoder = get_encoder(latent_dim)
     decoder = get_decoder(latent_dim)
-    inputs = keras.Input(shape=(1024, 88, 2))
+    inputs = keras.Input(shape=(1024, 88, 1))
     encoder_outputs = encoder(inputs)
     quantized_latents = vq_layer(encoder_outputs)
     reconstructions = decoder(quantized_latents)
     return keras.Model(inputs, reconstructions, name="vq_vae")
 
 class VQVAETrainer(keras.models.Model):
-    def __init__(self, latent_dim=128, num_embeddings=128, **kwargs):
+    def __init__(self, latent_dim, num_embeddings, **kwargs):
         super(VQVAETrainer, self).__init__(**kwargs)
         self.latent_dim = latent_dim
         self.num_embeddings = num_embeddings
