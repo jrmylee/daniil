@@ -81,12 +81,13 @@ def residual_block(x, in_channel, channel, kernel_size=3):
 
 
 def get_encoder(in_channel, out_channel, n_res_block, n_res_channel, stride):
-    encoder_inputs = keras.Input(shape=(None, None, in_channel))
     if stride == 4:
+        encoder_inputs = keras.Input(shape=(1024, 88, in_channel))
         x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=2, padding="same")(encoder_inputs)
         x = layers.Conv2D(out_channel, 4, activation="relu", strides=2, padding="same")(x)
         x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
     elif stride == 2:
+        encoder_inputs = keras.Input(shape=(256, 22, in_channel))
         x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=2, padding="same")(encoder_inputs)
         x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
     
@@ -100,8 +101,14 @@ def get_encoder(in_channel, out_channel, n_res_block, n_res_channel, stride):
 
 # takes downsampled by 4 samples with n_emb channels and outputs reconstructions
 def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, stride):
+    # get rid of this hard coded stuff
     
-    latent_inputs = keras.Input(shape=(None, None, in_channel)) # (freq, frames, n_emb)
+    if stride == 2: # top decoder
+        input_shape = (128, 11, in_channel)
+    elif stride == 4: # bottom decoder
+        input_shape = (256, 22, in_channel)
+    latent_inputs = keras.Input(input_shape) # (freq, frames, n_emb)
+    
     x = layers.Conv2D(channel, 3, activation="relu", padding="same")(latent_inputs)
     
     for i in range(n_res_block):
@@ -111,12 +118,12 @@ def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, st
         x = layers.Conv2DTranspose(channel // 2, 4, activation="relu", strides=2, padding="same")(x)
         decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(x)
     elif stride == 2:
-        decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(latent_inputs)
+        decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(x)
         
     return keras.Model(latent_inputs, decoder_outputs)
 
 def get_vqvae(embed_dim=64, n_embed=512):    
-    in_channel = 2
+    in_channel = 1
     channel = 128
     n_res_block, n_res_channel = 2, 32
     decay = 0.99
@@ -145,38 +152,36 @@ def get_vqvae(embed_dim=64, n_embed=512):
     
     
     # --------------- Model Definition ----------------
-    inputs = keras.Input(shape=(1024, 88, 2))
-    encoded_bottom = bottom_encoder(inputs)
-    encoded_top = top_encoder(encoded_bottom)
+    inputs = keras.Input(shape=(1024, 88, 1))
+    encoded_bottom = bottom_encoder(inputs) # (1024, 88, 2) => (256, 22, 128)
+    encoded_top = top_encoder(encoded_bottom) # (256, 22, 128) => (128, 11, 128)
     
     # get top encoding ready for quantization
-    pre_quant_top = pre_quantized_top(encoded_top)
-    quantized_top = quantize_top(pre_quant_top)
+    pre_quant_top = pre_quantized_top(encoded_top) # (128, 11, 128) => (128, 11, 64)
+    quantized_top = quantize_top(pre_quant_top) # (128, 11, 64)
     
     # Decode the top, and encode bottom layer with it
-    decoded_top = top_decoder(quantized_top)
-    encoded_bottom = layers.Concatenate(axis=3)([decoded_top, encoded_bottom])
+    decoded_top = top_decoder(quantized_top) # (128, 11, 64) => (256, 22, 2)
+    encoded_bottom = layers.Concatenate(axis=3)([decoded_top, encoded_bottom]) # (256, 22, 130)
     
     # Get bottom encoding ready for quantization
-    pre_quant_bottom = pre_quantized_bottom(encoded_bottom)
-    quantized_bottom = quantize_bottom(pre_quant_bottom)
+    pre_quant_bottom = pre_quantized_bottom(encoded_bottom) # (256, 22, 130) => (256, 22, 64)
+    quantized_bottom = quantize_bottom(pre_quant_bottom) # (256, 22, 64)
     
     # Use quantized top and bottom to decode
-    upsampled_top = upsample_top(quantized_top)
-    quantized = layers.Concatenate(axis=3)([upsampled_top, quantized_bottom])
+    upsampled_top = upsample_top(quantized_top) # (128, 11, 64) => (256, 22 , 64)
+    quantized = layers.Concatenate(axis=3)([upsampled_top, quantized_bottom]) # (256, 22, 128)
     
     # Some magic
-    reconstructions = decoder(quantized)
+    reconstructions = decoder(quantized) # (256, 22, 128) = > (1024, 88, 2)
     
     return keras.Model(inputs, reconstructions, name="vq_vae")
 
 class VQVAETrainer(keras.models.Model):
     def __init__(self, latent_dim, num_embeddings, **kwargs):
         super(VQVAETrainer, self).__init__(**kwargs)
-        self.latent_dim = latent_dim
-        self.num_embeddings = num_embeddings
 
-        self.vqvae = get_vqvae(self.latent_dim, self.num_embeddings)
+        self.vqvae = get_vqvae()
 
         self.total_loss_tracker = keras.metrics.Mean(name="total_loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(
