@@ -197,10 +197,11 @@ class VQVAETrainer(keras.models.Model):
             self.vq_loss_tracker,
         ]
 
-    def train_step(self, x):
+    def train_step(self, data):
+        x, x_ = data
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
-            reconstructions = self.vqvae(x)
+            reconstructions = self.vqvae(x_)
 
             # Calculate the losses.
             reconstruction_loss = (
