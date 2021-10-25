@@ -1,10 +1,8 @@
 import pandas as pd
 import os
 import tensorflow as tf
-from audiomentations import Compose, AddGaussianNoise, TimeStretch, PitchShift, Shift
 from preprocess import *
 import numpy as np
-import tensorflow_io as tfio
 import librosa
 from librosa import mel_frequencies
 
@@ -19,12 +17,10 @@ augmented_dir = "/global/scratch/users/jrmylee/preprocessed/original"
 
 def get_dataset(ds_dir=spectrogram_dir):
     files = [f for f in os.listdir(ds_dir) if os.path.isfile(os.path.join(ds_dir, f))]
-#     aug_files = [os.path.join(ds_dir, "aug", f) for f in files]
     files = [os.path.join(ds_dir, f) for f in files]
     
     # get augmented filenames
-    aug_files = get_spectrogram_files(augmented_dir)
-    files = [os.path.join(ds_dir, f) for f in aug_files] # get only good files that correspond to a augmented
+    aug_files = [f for f in os.listdir(augmented_dir) if os.path.isfile(os.path.join(augmented_dir, f))]
     aug_files = [os.path.join(augmented_dir, f) for f in aug_files]
     
     files = tf.constant(files) # [path_to_file1... path to filen]
