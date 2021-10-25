@@ -24,4 +24,5 @@
 #SBATCH --time=00:00:30
 #
 ## Command(s) to run (example):
+module load ml/tensorflow/2.5.0-py37 libsndfile
 python vqvae_train.py
