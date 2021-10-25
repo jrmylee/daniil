@@ -52,7 +52,7 @@ def split_data(ds, shuffle_buffer_size=1024, batch_size=64):
 # Returns the magnitude of the spectrogram, normalized
 def read_stft_file(item):
     stft = np.load(item.decode())
-    stft = np.pad(stft[:-1, :], ((0,0), (0,7)), 'constant').reshape(1024, 88, 1)
+    stft = np.pad(stft[:-1, :], ((0,0), (0,7)), 'constant').reshape(1024, 88, 1) / 2048.
     return stft.astype(np.float32)
 
 def normalize_mel(x):
