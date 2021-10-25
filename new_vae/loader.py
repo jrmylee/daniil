@@ -2,8 +2,6 @@ import pandas as pd
 import os
 import tensorflow as tf
 import numpy as np
-import librosa
-from librosa import mel_frequencies
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 

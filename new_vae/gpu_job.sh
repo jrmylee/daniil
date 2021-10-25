@@ -25,5 +25,5 @@
 #
 ## Command(s) to run (example):
 module unload python/3.7
-module load ml/tensorflow/2.5.0-py37 libsndfile
+module load ml/tensorflow/2.5.0-py37
 python vqvae_train.py
