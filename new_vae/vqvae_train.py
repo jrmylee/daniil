@@ -8,7 +8,7 @@ import datetime
 dataset = get_dataset()
 train_data, test_data = split_data(dataset)
 
-epochs = 20
+epochs = 10
 batch_size=64
 # set the dimensionality of the latent space to a plane for visualization later
 
