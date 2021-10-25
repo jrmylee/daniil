@@ -21,7 +21,7 @@ log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
 # Checkpoint Model Saving
-checkpoint_filepath = "/home/jerms/daniil/new_vae/saved_models/vqvae2_run_stft_3"
+checkpoint_filepath = "/home/jerms/daniil/new_vae/saved_models/savio_model_1"
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     filepath=checkpoint_filepath,
     save_weights_only=True,

@@ -21,7 +21,7 @@
 #SBATCH --gres=gpu:1
 #
 # Wall clock limit:
-#SBATCH --time=00:00:30
+#SBATCH --time=24:00:00
 #
 ## Command(s) to run (example):
 module unload python/3.7
