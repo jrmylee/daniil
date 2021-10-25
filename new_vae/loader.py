@@ -42,7 +42,6 @@ def split_data(ds, shuffle_buffer_size=1024, batch_size=64):
     
     test_ds = test_ds.shuffle(buffer_size=shuffle_buffer_size)
     test_ds = test_ds.map(load_audio, num_parallel_calls=AUTOTUNE)
-    test_ds = test_ds.map(lambda img, label: set_shapes(img, label, img_shape), num_parallel_calls=AUTOTUNE)
     test_ds = test_ds.batch(batch_size, drop_remainder=True)
    
     train_ds = train_ds.prefetch(tf.data.AUTOTUNE)
