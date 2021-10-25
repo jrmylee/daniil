@@ -1,11 +1,13 @@
 from models.vqvae2 import *
 import tensorflow as tf
 import time
-from loader import get_training_set
+from loader import get_dataset, split_data
 import numpy as np
 import datetime
 
-train_dataset, test_dataset = get_training_set()
+dataset = get_dataset()
+train_data, test_data = split_data(dataset)
+
 epochs = 20
 batch_size=64
 # set the dimensionality of the latent space to a plane for visualization later
@@ -32,4 +34,4 @@ callbacks = [
 ]
 
 # Yeet
-vqvae_trainer.fit(train_dataset, epochs=epochs, callbacks=callbacks)
+vqvae_trainer.fit(train_data, epochs=epochs, callbacks=callbacks)

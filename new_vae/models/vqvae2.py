@@ -87,7 +87,7 @@ def get_encoder(in_channel, out_channel, n_res_block, n_res_channel, stride):
         x = layers.Conv2D(out_channel, 4, activation="relu", strides=2, padding="same")(x)
         x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
     elif stride == 2:
-        encoder_inputs = keras.Input(shape=(256, 22, in_channel))
+        encoder_inputs = keras.Input(shape=(256, 88 // 4, in_channel))
         x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=2, padding="same")(encoder_inputs)
         x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
     

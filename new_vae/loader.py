@@ -14,39 +14,11 @@ root_dir = "/home/jerms/data/maestro-v3.0.0"
 csv_name = "maestro-v3.0.0.csv"
 _SEED = 2021
 
-spectrogram_dir = "/home/jerms/disk1/stft_original"
-augmented_dir = "/home/jerms/disk1/stft_augmented"
-
-hparams = HParams(  
-    # spectrogramming
-    win_length = 2048,
-    n_fft = 2048,
-    hop_length= 256,
-    ref_level_db = 50,
-    min_level_db = -100,
-    # mel scaling
-    num_mel_bins = 256,
-    mel_lower_edge_hertz = 0,
-    mel_upper_edge_hertz = 10000,
-    # inversion
-    power = 1.5, # for spectral inversion
-    griffin_lim_iters = 50,
-    pad=True,
-    #
-)
-
-def get_training_set():    
-    ds = get_dataset()
-    train_ds, test_ds = get_train_test_set(ds)    
-    return train_ds, test_ds
-
-def get_spectrogram_files(save_path):
-    onlyfiles = [f for f in os.listdir(save_path) if os.path.isfile(os.path.join(save_path, f))]
-    return onlyfiles
+spectrogram_dir = "/global/scratch/users/jrmylee/preprocessed/original"
+augmented_dir = "/global/scratch/users/jrmylee/preprocessed/original"
 
 def get_dataset(ds_dir=spectrogram_dir):
-    
-    files = get_spectrogram_files(ds_dir)
+    files = [f for f in os.listdir(ds_dir) if os.path.isfile(os.path.join(ds_dir, f))]
 #     aug_files = [os.path.join(ds_dir, "aug", f) for f in files]
     files = [os.path.join(ds_dir, f) for f in files]
     
@@ -61,30 +33,9 @@ def get_dataset(ds_dir=spectrogram_dir):
     dataset = tf.data.Dataset.from_tensor_slices((files, aug_files))    # => [[path to good file1 , path to badfile1], [], []]
     return dataset
 
-def read_npy_file(item):
-    stft_stacked = np.load(item.decode())
-    real, imag = stft_stacked[:-1, :, :-1], stft_stacked[:-1, :, 1:]
-    
-    data = np.sqrt(real ** 2 + imag ** 2)
-    data = np.pad(data, ((0,0), (0,1), (0,0)), 'constant')
-    data = librosa.amplitude_to_db(data, ref=np.max)
-    data = (-1 * data) / 80
-    return data.astype(np.float32)
-
-def load_audio(spec_filepath, dirty_spec_filepath):
-    print("loading stft")
-    transform_clean = tf.numpy_function(read_npy_file, [spec_filepath], [tf.float32])
-    transform_clean = tf.squeeze(transform_clean, axis=0)
-    spec_dirty = tf.numpy_function(read_npy_file, [dirty_spec_filepath], [tf.float32])   
-    spec_dirty = tf.squeeze(spec_dirty, axis=0)
-    return transform_clean, spec_dirty
-
-def set_shapes(img, label, img_shape):
-    img.set_shape(img_shape)
-    label.set_shape(img_shape)
-    return img, label
-
-def get_train_test_set(ds, shuffle_buffer_size=1024, batch_size=64):
+# Splits input dataset into training and test sets
+# to be used with get_dataset()
+def split_data(ds, shuffle_buffer_size=1024, batch_size=64):
     test_ds = ds.take(200) 
     train_ds = ds.skip(200)
     
@@ -103,3 +54,49 @@ def get_train_test_set(ds, shuffle_buffer_size=1024, batch_size=64):
     test_ds = test_ds.prefetch(tf.data.AUTOTUNE)
     
     return train_ds, test_ds
+
+
+# reads a file storing the result of an stft of shape (freq, time, 2), where the last channel is real, imag pairs
+# Returns the magnitude of the spectrogram, normalized
+def read_stft_file(item):
+    stft = np.load(item.decode())
+    stft = np.pad(stft[:-1, :], ((0,0), (0,7)), 'constant').reshape(1024, 88, 1)
+    return stft.astype(np.float32)
+
+def normalize_mel(x):
+    m_a = 0.0661371661726
+    m_b = 0.113718730221
+    p_a = 0.8
+    p_b = 0.
+    _a = np.asarray([m_a, p_a])[None, None, None, :]
+    _b = np.asarray([m_b, p_b])[None, None, None, :]
+
+    normalized_mel = tf.clip_by_value(_a * x + _b, -1.0, 1.0)
+    return normalized_mel
+
+def denormalize_mel(x):
+    m_a = 0.0661371661726
+    m_b = 0.113718730221
+    p_a = 0.8
+    p_b = 0.
+    _a = np.asarray([m_a, p_a])[None, None, None, :]
+    _b = np.asarray([m_b, p_b])[None, None, None, :]
+
+    return (x - _b) / _a
+
+# reads a file storing the result of a melspectrogram
+# returns the melspectrogram, normalized by pre-determined factors in GanSynth
+def read_mel_file(item):
+    mel = np.load(item.decode())
+    normalized_mel = normalize_mel(mel)
+
+    return normalized_mel
+
+def load_audio(spec_filepath, dirty_spec_filepath):
+    print("loading stft")
+
+    transform_clean = tf.numpy_function(read_stft_file, [spec_filepath], [tf.float32])
+    transform_clean = tf.squeeze(transform_clean, axis=0)
+    spec_dirty = tf.numpy_function(read_stft_file, [dirty_spec_filepath], [tf.float32])   
+    spec_dirty = tf.squeeze(spec_dirty, axis=0)
+    return transform_clean, spec_dirty
