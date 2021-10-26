@@ -1,2 +1,2 @@
-model_checkpoint_path: "vqvae2_run_stft_3"
-all_model_checkpoint_paths: "vqvae2_run_stft_3"
+model_checkpoint_path: "savio_model_1"
+all_model_checkpoint_paths: "savio_model_1"
