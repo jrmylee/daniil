@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import tensorflow as tf
 import numpy as np
+import librosa
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -85,7 +86,8 @@ def read_mel_file(item):
 
     return normalized_mel
 
-def load_audio(spec_filepath, dirty_spec_filepath):
+#def load_audio(spec_filepath, dirty_spec_filepath):
+def load_audio(spec_filepath):
     print("loading stft")
 
     transform_clean = tf.numpy_function(read_stft_file, [spec_filepath], [tf.float32])
