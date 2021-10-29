@@ -121,7 +121,7 @@ def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, st
         
     return keras.Model(latent_inputs, decoder_outputs)
 
-def get_vqvae(embed_dim=64, n_embed=512):    
+def get_encoder_system(embed_dim=64, n_embed=512):
     in_channel = 1
     channel = 128
     n_res_block, n_res_channel = 2, 32
@@ -136,7 +136,6 @@ def get_vqvae(embed_dim=64, n_embed=512):
     
     # --- Decoders ---
     top_decoder = get_decoder(embed_dim, embed_dim, channel, n_res_block, n_res_channel, stride=2)
-    decoder = get_decoder(embed_dim + embed_dim, in_channel, channel, n_res_block, n_res_channel, stride=4)
      
     # --- Pre Quantization Layers ---
     pre_quantized_top = layers.Conv2D(embed_dim, 1, padding="same")
@@ -170,17 +169,28 @@ def get_vqvae(embed_dim=64, n_embed=512):
     # Use quantized top and bottom to decode
     upsampled_top = upsample_top(quantized_top) # (128, 11, 64) => (256, 22 , 64)
     quantized = layers.Concatenate(axis=3)([upsampled_top, quantized_bottom]) # (256, 22, 128)
+
+    return keras.Model(inputs, quantized, name="encoder")
+
+def get_decoder_system(embed_dim=64, n_embed=512):    
+    in_channel = 1
+    channel = 128
+    n_res_block, n_res_channel = 2, 32
+    decay = 0.99
+   
+    decoder = get_decoder(embed_dim + embed_dim, in_channel, channel, n_res_block, n_res_channel, stride=4)
     
-    # Some magic
+    quantized_inputs = keras.Input(shape=(256, 22, 128))
     reconstructions = decoder(quantized) # (256, 22, 128) = > (1024, 88, 2)
     
-    return keras.Model(inputs, reconstructions, name="vq_vae")
+    return keras.Model(quantized_inputs, reconstructions, name="decoder")
 
 class VQVAETrainer(keras.models.Model):
     def __init__(self, latent_dim, num_embeddings, **kwargs):
         super(VQVAETrainer, self).__init__(**kwargs)
 
-        self.vqvae = get_vqvae()
+        self.encoder = get_encoder_system()
+        self.decoder = get_decoder_system()
 
         self.total_loss_tracker = keras.metrics.Mean(name="total_loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(
@@ -200,7 +210,8 @@ class VQVAETrainer(keras.models.Model):
         # x, x_ = data
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
-            reconstructions = self.vqvae(x)
+            quantized = self.encoder(x)
+            reconstructions = self.decoder(quantized)
 
             # Calculate the losses.
             reconstruction_loss = (
