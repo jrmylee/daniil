@@ -181,7 +181,7 @@ def get_decoder_system(embed_dim=64, n_embed=512):
     decoder = get_decoder(embed_dim + embed_dim, in_channel, channel, n_res_block, n_res_channel, stride=4)
     
     quantized_inputs = keras.Input(shape=(256, 22, 128))
-    reconstructions = decoder(quantized) # (256, 22, 128) = > (1024, 88, 2)
+    reconstructions = decoder(quantized_inputs) # (256, 22, 128) = > (1024, 88, 2)
     
     return keras.Model(quantized_inputs, reconstructions, name="decoder")
 
