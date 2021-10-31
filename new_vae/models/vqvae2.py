@@ -196,18 +196,21 @@ class VQVAETrainer(keras.models.Model):
             self.vq_loss_tracker,
         ]
 
+    def get_code_indices(self, quantizer, x):
+        flattened = tf.reshape(x, [-1, quantizer.embedding_dim])
+        return quantizer.get_code_indices(flattened)
+
     def top_and_bottom_indices(self, x):
         output_to_top = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_23").output)
         output_to_bottom = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_24").output)
         top_quantizer = self.vqvae.get_layer("vector_quantizer")
         bot_quantizer = self.vqvae.get_layer("vector_quantizer_1")
         
-        flattened = tf.reshape(x, [-1, quantizer.embedding_dim])
-
-        top_i = top_quantizer.get_code_indices(flattened)
-        bot_i = bot_quantizer.get_code_indices(flattened)
+        top_i = self.get_code_indices(top_quantizer, x)
+        bot_i = self.get_code_indices(bot_quantizer, x)
         return top_i, bot_i
         
+
     def train_step(self, x):
         # x, x_ = data
         with tf.GradientTape() as tape:

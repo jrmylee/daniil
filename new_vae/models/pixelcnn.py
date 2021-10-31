@@ -229,9 +229,7 @@ class PixelCNN(object):
     def fit(
         self,
         x,
-        y,
-        batch_size,
-        nb_epoch,
+        epochs,
         validation_data=None,
         shuffle=True):
         ''' call fit function
@@ -246,12 +244,9 @@ class PixelCNN(object):
         '''
         self.model.fit(
             x=x,
-            y=y,
-            batch_size=batch_size,
-            nb_epoch=nb_epoch,
-            callbacks=[self.tensorboard, self.checkpointer, self.earlystopping],
-            validation_data=validation_data,
-            shuffle=shuffle
+            epochs=epochs,
+            callbacks=[self.tensorboard, self.earlystopping],
+            validation_data=validation_data
         )
 
     def fit_generator(

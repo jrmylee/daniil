@@ -20,7 +20,7 @@ save_dir = "/global/scratch/users/jrmylee/preprocessed/codes"
 for element in dataset:
     spec, filepath = element
 
-    filename = filepath.split("/")
+    filename = filepath.decode().split("/")
     filename = filename[len(filename) - 1]
 
     print("saving: " + filename)
