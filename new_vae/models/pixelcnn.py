@@ -130,10 +130,10 @@ class PixelCNN(object):
 
     def _masked_conv(self, x, filter_size, stack_name, layer_idx, mask_type='B'):
         if stack_name == 'vertical':
-            res = ZeroPadding2D(padding=(filter_size[0]//2, 0, filter_size[1]//2, filter_size[1]//2), name='v_pad_'+str(layer_idx))(x)
+            res = ZeroPadding2D(padding=((filter_size[0]//2, 0), (filter_size[1]//2, filter_size[1]//2)), name='v_pad_'+str(layer_idx))(x)
             res = Convolution2D(2*self.nb_filters, filter_size[0]//2+1, filter_size[1], border_mode='valid', name='v_conv_'+str(layer_idx))(res)
         elif stack_name == 'horizontal':
-            res = ZeroPadding2D(padding=(0, 0, filter_size[1]//2, 0), name='h_pad_'+str(layer_idx))(x)
+            res = ZeroPadding2D(padding=((0, 0), (filter_size[1]//2, 0)), name='h_pad_'+str(layer_idx))(x)
             if mask_type == 'A':
                 res = Convolution2D(2*self.nb_filters, 1, filter_size[1]//2, border_mode='valid', name='h_conv_'+str(layer_idx))(res)
             else:
@@ -145,7 +145,7 @@ class PixelCNN(object):
     @staticmethod
     def _shift_down(x):
         x_shape = K.int_shape(x)
-        x = ZeroPadding2D(padding=(1,0,0,0))(x)
+        x = ZeroPadding2D(padding=((1,0),(0,0)))(x)
         x = Lambda(lambda x: x[:,:x_shape[1],:,:])(x)
         return x
 
