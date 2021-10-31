@@ -10,6 +10,7 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 def read_codes(item):
     codes = np.load(item.decode(), allow_pickle=True)
     codes = codes[0].reshape(128, 11, 1)
+    data = np.where(data < (0.33 * 512), 0, 1)
     return codes.astype(np.float32)
 
 def load_file(filepath):
