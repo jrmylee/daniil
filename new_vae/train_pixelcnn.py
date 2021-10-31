@@ -8,13 +8,14 @@ from tqdm import tqdm
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 def read_codes(item):
-    codes = np.load(item.decode())
-    codes = codes.reshape(128, 11, 1)
+    codes = np.load(item.decode(), allow_pickle=True)
+    codes = codes[0].reshape(128, 11, 1)
     return codes.astype(np.float32)
 
 def load_file(filepath):
     codes = tf.numpy_function(read_codes, [filepath], [tf.float32])
-    return codes
+    codes = tf.squeeze(codes, axis=0)
+    return (codes, codes)
 
 def split_data(ds, shuffle_buffer_size=1024, batch_size=64):
     test_ds = ds.take(200) 
@@ -128,6 +129,6 @@ callbacks = [
 ]
 
 pixel_cnn.fit(
-    x=train_ds, y=train_ds, batch_size=128, epochs=50, validation_split=0.1, verbose=2, callbacks=callbacks
+    x=train_ds,  epochs=10, callbacks=callbacks
 )
 
