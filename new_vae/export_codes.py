@@ -11,6 +11,7 @@ model = VQVAETrainer(latent_dim=None, num_embeddings=None)
 model.load_weights("./saved_models/savio_model_1")
 model.compile(optimizer=keras.optimizers.Adam())
 
+print("model loaded")
 
 dataset = get_dataset()
 dataset = dataset.map(load_audio, num_parallel_calls=AUTOTUNE)
@@ -20,12 +21,12 @@ save_dir = "/global/scratch/users/jrmylee/preprocessed/codes"
 for element in dataset:
     spec, filepath = element
 
-    filename = filepath.split("/")
+    filename = filepath.numpy().decode().split("/")
     filename = filename[len(filename) - 1]
 
     print("saving: " + filename)
 
     save_path = os.path.join(save_dir, filename)
 
-    top_index, bot_index = model.get_code_indices(spec)
-    np.save(save_path, [top_index, bot_index])
+    top_index, bot_index = model.top_and_bottom_indices(spec)
+    np.save(save_path, [top_index.numpy(), bot_index.numpy()])
