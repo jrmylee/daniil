@@ -52,7 +52,7 @@ class GatedCNN(object):
             xW = Lambda(self._crop_right, name='h_crop_right_'+str(layer_idx))(xW)
 
         if self.v_map is not None:
-            xW = Sum()([xW, self.v_map], name='h_merge_v_'+str(layer_idx))
+            xW = Add(name='h_merge_v_'+str(layer_idx))([xW, self.v_map])
         
         if self.h is not None:
             hV = Dense(output_dim=2*self.nb_filters, name=stack_tag+'_dense_latent_'+str(layer_idx))(self.h)
@@ -66,7 +66,7 @@ class GatedCNN(object):
         xW_f = Lambda(lambda x: K.tanh(x), name=stack_tag+'_tanh_'+str(layer_idx))(xW_f)
         xW_g = Lambda(lambda x: K.sigmoid(x), name=stack_tag+'_sigmoid_'+str(layer_idx))(xW_g)
 
-        res = Multiply()([xW_f, xW_g],name=stack_tag+'_merge_gate_'+str(layer_idx))
+        res = Multiply(name=stack_tag+'_merge_gate_'+str(layer_idx))([xW_f, xW_g])
         #print(type(res), K.int_shape(res), hasattr(res, '_keras_history'))
         return res
 
@@ -186,7 +186,7 @@ class PixelCNN(object):
             h_stack_out = GatedCNN(self.nb_filters, 'horizontal', v_map=v_feed_map, h=self.h)(h_masked_map, i)
             h_stack_out = Convolution2D(self.nb_filters, 1, 1, padding='valid', name='h_1x1_conv_'+str(i))(h_stack_out)
             ### residual connection
-            h_stack_out = Sum()([h_stack_out, h_stack_out_prev], name='h_residual_'+str(i))
+            h_stack_out = Add(name='h_residual_'+str(i))([h_stack_out, h_stack_out_prev])
 
         # (1x1) convolution layers (2 layers)
         for i in range(2):
