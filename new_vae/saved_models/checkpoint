@@ -1,2 +1,2 @@
-model_checkpoint_path: "savio_model_1"
-all_model_checkpoint_paths: "savio_model_1"
+model_checkpoint_path: "pixel_model_1"
+all_model_checkpoint_paths: "pixel_model_1"
