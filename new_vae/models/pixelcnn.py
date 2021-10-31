@@ -104,8 +104,6 @@ class PixelCNN(object):
             save_root (str)             : Root directory to which {trained model file, parameter.txt, tensorboard log file} are saved
             save_best_only (bool)       : if True, the latest best model will not be overwritten (default: False)
         '''
-        K.common.set_image_dim_ordering('tf')
-
         self.input_size = input_size
         self.conditional = conditional
         self.latent_dim = latent_dim
