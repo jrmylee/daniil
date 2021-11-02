@@ -53,7 +53,6 @@ def split_data(ds, shuffle_buffer_size=1024, batch_size=64):
 # Returns the magnitude of the spectrogram, normalized
 def read_stft_file(item):
     stft = np.load(item.decode())
-    stft = -1 * librosa.amplitude_to_db(stft, ref=np.max) / 80.
     stft = stft[:-1, :-1].reshape(1024, 88, 1)
     return stft.astype(np.float32)
 

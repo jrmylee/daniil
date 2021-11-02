@@ -24,6 +24,12 @@ class VectorQuantizer(layers.Layer):
             name="embeddings_vqvae",
         )
 
+    def get_quantized(self, encoding_indices, input_shape):
+        encodings = tf.one_hot(encoding_indices, self.num_embeddings)
+        quantized = tf.matmul(encodings, self.embeddings, transpose_b=True)
+        quantized = tf.reshape(quantized, input_shape)
+        return quantized
+
     def call(self, x):
         # Calculate the input shape of the inputs and
         # then flatten the inputs keeping `embedding_dim` intact.
@@ -212,7 +218,23 @@ class VQVAETrainer(keras.models.Model):
         top_i = self.get_code_indices(top_quantizer, pretop)
         bot_i = self.get_code_indices(bot_quantizer, prebot)
         return top_i, bot_i
-        
+
+    def decode(self, quantized_top, quantized_bot):
+        upsample_top = self.vqvae.get_layer("conv2d_transpose_3")
+        upsampled_top = upsample_top(quantized_top)
+        quantized = layers.Concatenate(axis=3)([upsampled_top, quantized_bot])
+        decoder = self.vqvae.get_layer("model_3")
+
+        return decoder(quantized)
+    
+    def decode_code(self, code_top, code_bot):
+        top_quantizer = self.vqvae.get_layer("vector_quantizer")
+        bot_quantizer = self.vqvae.get_layer("vector_quantizer_1")
+
+        quant_top = top_quantizer.get_quantized(code_top, (1, 128, 11, 64))
+        quant_bot = bot_quantizer.get_quantized(code_bot, (1, 256, 22, 64))
+
+        return self.decode(quant_top, quant_bot)
 
     def train_step(self, x):
         # x, x_ = data
