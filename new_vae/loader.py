@@ -93,4 +93,4 @@ def load_audio(spec_filepath):
     # transform_clean = tf.squeeze(transform_clean, axis=0)
     # spec_dirty = tf.numpy_function(read_stft_file, [dirty_spec_filepath], [tf.float32])   
     # spec_dirty = tf.squeeze(spec_dirty, axis=0)
-    return transform_clean, spec_filepath
+    return transform_clean
