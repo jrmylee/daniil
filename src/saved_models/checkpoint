@@ -1,0 +1,2 @@
+model_checkpoint_path: "top_encoder"
+all_model_checkpoint_paths: "top_encoder"

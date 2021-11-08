@@ -1,0 +1,13 @@
+{
+    "training_params": {
+        "learning_rate" : 0.0005,
+        "num_epochs" : 1,
+        "batch_size": 32,
+        "vector_dimension" : 64,
+        "hop_size" : 256,
+        "sr" : 44100,
+        "min_level_db": -100,
+        "ref_level_db": 20,
+        "time_axis_length": 176
+    }
+}
