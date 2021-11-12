@@ -5,8 +5,8 @@ import librosa
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-spectrogram_dir = "/Users/llewyn/Documents/data/stft/original"
-augmented_dir = "/Users/llewyn/Documents/data/stft/echoed"
+spectrogram_dir = "/global/scratch/users/jrmylee/preprocessed/original"
+augmented_dir = "/global/scratch/users/jrmylee/preprocessed/echoed"
 
 def get_dataset(ds_dir=spectrogram_dir):
     files = [f for f in os.listdir(ds_dir) if os.path.isfile(os.path.join(ds_dir, f))]
@@ -36,8 +36,8 @@ def split_data(ds, shuffle_buffer_size=1024, batch_size=64):
     test_ds = test_ds.map(load_audio, num_parallel_calls=AUTOTUNE)
     test_ds = test_ds.batch(batch_size, drop_remainder=True)
    
-    train_ds = train_ds.prefetch(tf.data.AUTOTUNE)
-    test_ds = test_ds.prefetch(tf.data.AUTOTUNE)
+    train_ds = train_ds.prefetch(AUTOTUNE)
+    test_ds = test_ds.prefetch(AUTOTUNE)
     
     return train_ds, test_ds
 

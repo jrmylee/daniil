@@ -8,6 +8,7 @@
         "sr" : 44100,
         "min_level_db": -100,
         "ref_level_db": 20,
-        "time_axis_length": 176
+        "dataset_dir": "/Users/llewyn/Documents/data/stft/",
+        "model_save_dir": "/Users/llewyn/Documents/projects/mir/daniil/src/saved_models/"
     }
 }

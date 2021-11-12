@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -238,6 +239,13 @@ class VQVAETrainer(keras.models.Model):
 
     def train_step(self, data):
         x, x_ = data
+        flip = random.uniform(0, 1)
+
+        if flip <= .6:
+            train_on = x
+        else:
+            train_on = x_
+
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
             reconstructions = self.vqvae(x_)

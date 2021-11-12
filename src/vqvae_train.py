@@ -7,20 +7,21 @@ import datetime
 dataset = get_dataset()
 train_data, test_data = split_data(dataset)
 
-epochs = 10
+epochs = 30
 batch_size=64
 # set the dimensionality of the latent space to a plane for visualization later
 
 # Model Definitions
 vqvae_trainer = VQVAETrainer(latent_dim=None, num_embeddings=None)
-vqvae_trainer.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-6))
+vqvae_trainer.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-4))
 
 # Tensorboard
 log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
 # Checkpoint Model Saving
-checkpoint_filepath = "/Users/llewyn/Documents/projects/mir/daniil/src/saved_models/macbook_model"
+checkpoint_filepath = "/global/home/users/jrmylee/projects/daniil/new_vae/saved_models/echoed_model_2"
+
 model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
     filepath=checkpoint_filepath,
     save_weights_only=True,
