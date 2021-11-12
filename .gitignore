@@ -1,3 +1,7 @@
 images
 gtzan*
 .DS_Store
+src/config.json
+**/logs
+**/__pycache__
+**/ipynb_checkpoints
