@@ -245,7 +245,7 @@ class VQVAETrainer(keras.models.Model):
         x_clean, x_noised = data
         
         if self.mode == "reconstruction":
-            x, x_ = x_clean
+            x, x_ = x_clean, x_clean
         elif self.mode == "restoration":
             x_ = x_noised
             x = x_clean
