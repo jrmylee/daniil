@@ -5,15 +5,12 @@ import librosa
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
-spectrogram_dir = "/global/scratch/users/jrmylee/preprocessed/original"
-augmented_dir = "/global/scratch/users/jrmylee/preprocessed/echoed"
-
-def get_dataset(ds_dir=spectrogram_dir):
-    files = [f for f in os.listdir(ds_dir) if os.path.isfile(os.path.join(ds_dir, f))]
-    files = [os.path.join(ds_dir, f) for f in files]
-    
+def get_dataset(ds_dir, augmented_dir):
     # get augmented filenames
     aug_files = [f for f in os.listdir(augmented_dir) if os.path.isfile(os.path.join(augmented_dir, f))]
+    files = aug_files
+    
+    files = [os.path.join(ds_dir, f) for f in files]
     aug_files = [os.path.join(augmented_dir, f) for f in aug_files]
     
     files = tf.constant(files) # [path_to_file1... path to filen]
@@ -50,34 +47,6 @@ def read_stft_file(item):
     stft = stft[:-1, :-1].reshape(1024, 88, 1)
     return stft.astype(np.float32)
 
-def normalize_mel(x):
-    m_a = 0.0661371661726
-    m_b = 0.113718730221
-    p_a = 0.8
-    p_b = 0.
-    _a = np.asarray([m_a, p_a])[None, None, None, :]
-    _b = np.asarray([m_b, p_b])[None, None, None, :]
-
-    normalized_mel = tf.clip_by_value(_a * x + _b, -1.0, 1.0)
-    return normalized_mel
-
-def denormalize_mel(x):
-    m_a = 0.0661371661726
-    m_b = 0.113718730221
-    p_a = 0.8
-    p_b = 0.
-    _a = np.asarray([m_a, p_a])[None, None, None, :]
-    _b = np.asarray([m_b, p_b])[None, None, None, :]
-
-    return (x - _b) / _a
-
-# reads a file storing the result of a melspectrogram
-# returns the melspectrogram, normalized by pre-determined factors in GanSynth
-def read_mel_file(item):
-    mel = np.load(item.decode())
-    normalized_mel = normalize_mel(mel)
-
-    return normalized_mel
 
 def load_audio(spec_filepath, dirty_spec_filepath):
 # def load_audio(spec_filepath):
