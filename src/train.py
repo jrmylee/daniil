@@ -45,3 +45,7 @@ with open("config.json") as file:
 
         # Yeet
         vqvae_trainer.fit(dataset, epochs=epochs, callbacks=callbacks)
+
+        vqvae_trainer.set_mode("reconstruction")
+
+        vqvae_trainer.fit(dataset, epochs=epochs, callbacks=callbacks)

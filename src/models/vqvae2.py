@@ -184,7 +184,7 @@ def get_vqvae(embed_dim=64, n_embed=512):
     return keras.Model(inputs, reconstructions, name="vq_vae")
 
 class VQVAETrainer(keras.models.Model):
-    def __init__(self, latent_dim, num_embeddings, **kwargs):
+    def __init__(self, latent_dim, num_embeddings, mode="reconstruction", **kwargs):
         super(VQVAETrainer, self).__init__(**kwargs)
 
         self.vqvae = get_vqvae()
@@ -196,7 +196,8 @@ class VQVAETrainer(keras.models.Model):
         self.vq_loss_tracker = keras.metrics.Mean(name="vq_loss")
         self.prequantize_top = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_23").output)
         self.prequantize_bot = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_24").output)	
-        
+        self.mode = mode
+
     @property
     def metrics(self):
         return [
@@ -204,6 +205,9 @@ class VQVAETrainer(keras.models.Model):
             self.reconstruction_loss_tracker,
             self.vq_loss_tracker,
         ]
+
+    def set_mode(self, mode):
+        self.mode = mode
 
     def get_code_indices(self, quantizer, x):
         flattened = tf.reshape(x, [-1, quantizer.embedding_dim])
@@ -238,14 +242,14 @@ class VQVAETrainer(keras.models.Model):
         return self.decode(quant_top, quant_bot)
 
     def train_step(self, data):
-        x, x_ = data
-        flip = random.uniform(0, 1)
-
-        if flip <= .6:
-            train_on = x
-        else:
-            train_on = x_
-
+        x_clean, x_noised = data
+        
+        if self.mode == "reconstruction":
+            x, x_ = x_clean
+        elif self.mode == "restoration":
+            x_ = x_noised
+            x = x_clean
+            
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
             reconstructions = self.vqvae(x_)
