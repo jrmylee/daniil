@@ -30,22 +30,23 @@ with open("config.json") as file:
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
         # Checkpoint Model Saving
-        checkpoint_filepath = os.path.join(hparams.model_save_dir, "macbook_model")
+        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_model_1")
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,
-            save_best_only=True,
+            save_best_only=False,
             monitor='loss')
 
-        # Define keras callbacks
-        callbacks = [
-            tensorboard_callback,
-            model_checkpoint_callback
-        ]
-
         # Yeet
-        vqvae_trainer.fit(dataset, epochs=epochs, callbacks=callbacks)
+        vqvae_trainer.fit(dataset, epochs=epochs, callbacks=[tensorboard_callback, model_checkpoint_callback])
 
-        vqvae_trainer.set_mode("reconstruction")
+        vqvae_trainer.set_mode("restoration")
 
-        vqvae_trainer.fit(dataset, epochs=epochs, callbacks=callbacks)
+        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_model_1")
+        model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+            filepath=checkpoint_filepath,
+            save_weights_only=True,
+            save_best_only=False,
+            monitor='loss')
+
+        vqvae_trainer.fit(dataset, epochs=epochs, callbacks=[checkpoint_filepath])
