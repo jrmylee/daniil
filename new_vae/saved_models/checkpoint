@@ -1,2 +1,2 @@
-model_checkpoint_path: "macbook_model"
-all_model_checkpoint_paths: "macbook_model"
+model_checkpoint_path: "recon_model_1"
+all_model_checkpoint_paths: "recon_model_1"
