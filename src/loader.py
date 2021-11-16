@@ -38,6 +38,14 @@ def split_data(ds, shuffle_buffer_size=1024, batch_size=64):
     
     return train_ds, test_ds
 
+def mask_stft(spec, mask_ratio=0.5):
+    total_length = spec.shape[0] * spec.shape[1]
+    mask = np.zeros(total_length, dtype=int)
+    mask[:int(total_length * mask_ratio)] = 1
+    np.random.shuffle(mask)
+    mask = mask.astype(bool).reshape(spec.shape)
+    spec[mask == 1] = -80.
+    return spec
 
 # reads a file storing the result of an stft of shape (freq, time, 2), where the last channel is real, imag pairs
 # Returns the magnitude of the spectrogram, normalized
@@ -47,6 +55,13 @@ def read_stft_file(item):
     stft = stft[:-1, :-1].reshape(1024, 88, 1)
     return stft.astype(np.float32)
 
+def read_reverb_file(item):
+    stft = np.load(item.decode())
+    db = librosa.amplitude_to_db(stft, ref=np.max)
+    db = mask_stft(db)
+    stft = -1 * db / 80.
+    stft = stft[:-1, :-1].reshape(1024, 88, 1)
+    return stft.astype(np.float32)
 
 def load_audio(spec_filepath, dirty_spec_filepath):
 # def load_audio(spec_filepath):
@@ -54,6 +69,6 @@ def load_audio(spec_filepath, dirty_spec_filepath):
 
     transform_clean = tf.numpy_function(read_stft_file, [spec_filepath], [tf.float32])
     transform_clean = tf.squeeze(transform_clean, axis=0)
-    transform_dirty = tf.numpy_function(read_stft_file, [dirty_spec_filepath], [tf.float32])   
+    transform_dirty = tf.numpy_function(read_reverb_file, [dirty_spec_filepath], [tf.float32])   
     transform_dirty = tf.squeeze(transform_dirty, axis=0)
     return transform_clean, transform_dirty

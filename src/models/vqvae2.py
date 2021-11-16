@@ -7,7 +7,7 @@ from tensorflow.keras import layers
 import tensorflow as tf
 
 class VectorQuantizer(layers.Layer):
-    def __init__(self, num_embeddings, embedding_dim, beta=0.25, **kwargs):
+    def __init__(self, num_embeddings, embedding_dim, beta=2, **kwargs):
         super().__init__(**kwargs)
         self.embedding_dim = embedding_dim
         self.num_embeddings = num_embeddings

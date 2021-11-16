@@ -25,24 +25,9 @@ with open("config.json") as file:
         vqvae_trainer = VQVAETrainer(latent_dim=None, num_embeddings=None)
         vqvae_trainer.compile(optimizer=keras.optimizers.Adam(learning_rate=hparams.learning_rate))
 
-        # Tensorboard
-        log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-
-        # Checkpoint Model Saving
-        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_model_1")
-        model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-            filepath=checkpoint_filepath,
-            save_weights_only=True,
-            save_best_only=False,
-            monitor='loss')
-
-        # Yeet
-        vqvae_trainer.fit(dataset, epochs=epochs, callbacks=[tensorboard_callback, model_checkpoint_callback])
-
         vqvae_trainer.set_mode("restoration")
 
-        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_model_1")
+        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_model_2")
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,
