@@ -58,7 +58,7 @@ def read_stft_file(item):
 def read_reverb_file(item):
     stft = np.load(item.decode())
     db = librosa.amplitude_to_db(stft, ref=np.max)
-    db = mask_stft(db)
+    # db = mask_stft(db)
     stft = -1 * db / 80.
     stft = stft[:-1, :-1].reshape(1024, 88, 1)
     return stft.astype(np.float32)

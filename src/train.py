@@ -17,8 +17,7 @@ with open("config.json") as file:
     batch_size *= mirrored_strategy.num_replicas_in_sync
 
     dataset = get_dataset(ds_dir=os.path.join(hparams.dataset_dir, "original"),augmented_dir=os.path.join(hparams.dataset_dir, "echoed"))
-    dataset = dataset.map(load_audio, num_parallel_calls=tf.data.AUTOTUNE)
-    dataset = dataset.batch(batch_size, drop_remainder=True)
+    train_set, test_set = split_data(dataset, batch_size=batch_size)
 
     with mirrored_strategy.scope():
         # Model Definitions
@@ -31,7 +30,7 @@ with open("config.json") as file:
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,
-            save_best_only=False,
+            save_best_only=True,
             monitor='loss')
 
-        vqvae_trainer.fit(dataset, epochs=epochs, callbacks=[checkpoint_filepath])
+        vqvae_trainer.fit(train_set, epochs=epochs,validation_data=test_set, callbacks=[checkpoint_filepath])
