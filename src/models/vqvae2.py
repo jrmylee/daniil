@@ -194,6 +194,13 @@ class VQVAETrainer(keras.models.Model):
             name="reconstruction_loss"
         )
         self.vq_loss_tracker = keras.metrics.Mean(name="vq_loss")
+
+        self.valid_loss_tracker = keras.metrics.Mean(name="val_total_loss")
+        self.valid_reconstruction_loss_tracker = keras.metrics.Mean(
+            name="val_reconstruction_loss"
+        )
+        self.valid_vq_loss_tracker = keras.metrics.Mean(name="val_vq_loss")
+
         self.prequantize_top = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_23").output)
         self.prequantize_bot = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_24").output)	
         self.mode = mode
@@ -240,6 +247,34 @@ class VQVAETrainer(keras.models.Model):
         quant_bot = bot_quantizer.get_quantized(code_bot, (1, 256, 22, 64))
 
         return self.decode(quant_top, quant_bot)
+
+    def test_step(self, data):
+        x_clean, x_noised = data
+        
+        if self.mode == "reconstruction":
+            x, x_ = x_clean, x_clean
+        elif self.mode == "restoration":
+            x_ = x_noised
+            x = x_clean
+        
+        reconstructions = self.vqvae(x_)
+
+        # Calculate the losses.
+        reconstruction_loss = (
+            tf.reduce_mean((x - reconstructions) ** 2)
+        )
+        total_loss = reconstruction_loss + sum(self.vqvae.losses)
+        self.valid_loss_tracker.update_state(total_loss)
+        self.valid_reconstruction_loss_tracker.update_state(reconstruction_loss)
+        self.valid_vq_loss_tracker.update_state(sum(self.vqvae.losses))
+
+        # Log results.
+        return {
+            "loss": self.valid_loss_tracker.result(),
+            "reconstruction_loss": self.valid_reconstruction_loss_tracker.result(),
+            "vqvae_loss": self.valid_vq_loss_tracker.result(),
+        }
+        
 
     def train_step(self, data):
         x_clean, x_noised = data
