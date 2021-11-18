@@ -88,7 +88,7 @@ def residual_block(x, in_channel, channel, kernel_size=3):
 
 def get_encoder(in_channel, out_channel, n_res_block, n_res_channel, stride):
     if stride == 4:
-        encoder_inputs = keras.Input(shape=(87, 1024, in_channel))
+        encoder_inputs = keras.Input(shape=(88, 1024, in_channel))
         x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=2, padding="same")(encoder_inputs)
         x = layers.Conv2D(out_channel, 4, activation="relu", strides=2, padding="same")(x)
         x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
@@ -293,7 +293,7 @@ class VQVAETrainer(keras.models.Model):
 
         phase = self.Phase_layer(stft) # (88, 1024, 1)
         mag = self.Mag_Layer(stft)
-        decibel = self.Decibel_Layer(mag)
+        decibel = self.Decibel_Layer(tf.math.square(mag)) / -80.
 
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
