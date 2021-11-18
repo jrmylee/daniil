@@ -157,7 +157,7 @@ def get_vqvae(embed_dim=64, n_embed=512):
     
     
     # --------------- Model Definition ----------------
-    input_shape = (87, 1024, 1)
+    input_shape = (88, 1024, 1)
     inputs = keras.Input(shape=input_shape)
     
     encoded_bottom = bottom_encoder(inputs) # (1024, 88, 2) => (256, 22, 128)
@@ -279,31 +279,25 @@ class VQVAETrainer(keras.models.Model):
             "vqvae_loss": self.valid_vq_loss_tracker.result(),
         }
 
-
+    def mag_phase_2_real_imag(self, mag, phase):      
+        cos_phase = tf.math.cos(phase)
+        sin_phase = tf.math.sin(phase)
+        r= tf.complex(mag*cos_phase, mag*sin_phase)
+        return  r
     def train_step(self, x):
-        # x_clean, x_noised = data
-
-        # if self.mode == "reconstruction":
-        #     x, x_ = x_clean, x_clean
-        # elif self.mode == "restoration":
-        #     x_ = x_noised
-        #     x = x_clean
+        x = tf.squeeze(x, axis=0)
         stft = self.STFT_Layer(x)
-        stft = stft[:, :-1, :]
-        mag = self.Mag_Layer(stft)
-        phase = self.Phase_layer(stft) # (87, 1025, 1)
-
+        stft = stft[:, :, :-1, :]
+        # phase = self.Phase_layer(stft) # (87, 1025, 1)
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
+            mag = self.Mag_Layer(stft)
             recon_mag = self.vqvae(mag)
-            recon_mag = recon_mag[:-1, :, :] # (87, 1024, 1)
-
-            recon_stft = recon_mag * tf.math.exp(phase[:, :-1, 1])
-            recon_audio = self.ISTFT_Layer(recon_stft)
-
+            # recon_stft = self.mag_phase_2_real_imag(recon_mag, phase)
+            #recon_audio = self.ISTFT_Layer(recon_stft)
             # Calculate the losses.
             reconstruction_loss = (
-                tf.reduce_mean((x - recon_audio) ** 2)
+                tf.reduce_mean((mag - recon_mag) ** 2)
             )
             total_loss = reconstruction_loss + sum(self.vqvae.losses)
 
