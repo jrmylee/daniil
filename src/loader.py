@@ -2,6 +2,7 @@ import os
 import tensorflow as tf
 import numpy as np
 import librosa
+import pandas as pd
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -18,6 +19,37 @@ def get_dataset(ds_dir, augmented_dir):
     
     dataset = tf.data.Dataset.from_tensor_slices((files, aug_files))    # => [[path to good file1 , path to badfile1], [], []]
     return dataset
+
+def get_audio_dataset(ds_path, mapping_filename):
+    csv_path = os.path.join(ds_path, mapping_filename)
+    csv = pd.read_csv(csv_path)
+    files = []
+    for index, row in csv.iterrows():
+        full_audio_path = os.path.join(ds_path, row["audio_filename"])
+
+        files.append(full_audio_path)
+    
+    dataset = tf.data.Dataset.from_tensor_slices(files)
+    return dataset
+
+def split_audio_dataset(ds, shuffle_buffer_size=1024, batch_size=64):
+    test_ds = ds.take(200) 
+    train_ds = ds.skip(200)
+        
+    train_ds = train_ds.shuffle(buffer_size=shuffle_buffer_size)
+    train_ds = train_ds.map(load_audio, num_parallel_calls=AUTOTUNE)
+    train_ds = train_ds.unbatch()
+    train_ds = train_ds.batch(batch_size, drop_remainder=True)
+    
+    test_ds = test_ds.shuffle(buffer_size=shuffle_buffer_size)
+    test_ds = test_ds.map(load_audio, num_parallel_calls=AUTOTUNE)
+    test_ds = test_ds.unbatch()
+    test_ds = test_ds.batch(batch_size, drop_remainder=True)
+   
+    train_ds = train_ds.prefetch(AUTOTUNE)
+    test_ds = test_ds.prefetch(AUTOTUNE)
+    
+    return train_ds, test_ds
 
 # Splits input dataset into training and test sets
 # to be used with get_dataset()
@@ -47,6 +79,25 @@ def mask_stft(spec, mask_ratio=0.5):
     spec[mask == 1] = -80.
     return spec
 
+def read_audio(item):
+    x, sr = librosa.load(item, sr=44100, mono=True)
+    chunk_length = 2048 * 22
+    if len(x) % chunk_length != 0:
+        multiple = np.ceil(len(x) / chunk_length)
+        pad_amount = chunk_length * multiple - len(x)
+        x = np.pad(x, (0, int(pad_amount)), 'constant', constant_values=(0, 0))
+
+    # split in 2 second chunks and export to files 
+    arr = []
+    for i in range(0, len(x), 2048 * 22):
+        y = x[i : i + 2048 * 22]
+        arr.append(y)
+
+    arr = np.array(arr)
+    arr = np.expand_dims(arr, axis=2)
+        
+    return arr
+
 # reads a file storing the result of an stft of shape (freq, time, 2), where the last channel is real, imag pairs
 # Returns the magnitude of the spectrogram, normalized
 def read_stft_file(item):
@@ -63,7 +114,7 @@ def read_reverb_file(item):
     stft = stft[:-1, :-1].reshape(1024, 88, 1)
     return stft.astype(np.float32)
 
-def load_audio(spec_filepath, dirty_spec_filepath):
+def load_stft(spec_filepath, dirty_spec_filepath):
 # def load_audio(spec_filepath):
     print("loading stft")
 
@@ -72,3 +123,9 @@ def load_audio(spec_filepath, dirty_spec_filepath):
     transform_dirty = tf.numpy_function(read_reverb_file, [dirty_spec_filepath], [tf.float32])   
     transform_dirty = tf.squeeze(transform_dirty, axis=0)
     return transform_clean, transform_dirty
+
+def load_audio(audio_filepath):
+    print("loading audio")
+
+    audio_clean = tf.numpy_function(read_audio, [audio_filepath], [tf.float32])
+    return audio_clean

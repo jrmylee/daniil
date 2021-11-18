@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import random
 
 from tensorflow import keras
 from tensorflow.keras import layers
 import tensorflow as tf
+from kapre.composed import get_stft_magnitude_layer
 
 class VectorQuantizer(layers.Layer):
     def __init__(self, num_embeddings, embedding_dim, beta=2, **kwargs):
@@ -158,8 +158,14 @@ def get_vqvae(embed_dim=64, n_embed=512):
     
     
     # --------------- Model Definition ----------------
-    inputs = keras.Input(shape=(1024, 88, 1))
-    encoded_bottom = bottom_encoder(inputs) # (1024, 88, 2) => (256, 22, 128)
+    input_shape = (2048 * 22, 1)
+    inputs = keras.Input(shape=input_shape)
+    stft = get_stft_magnitude_layer(n_fft=2048, win_length=2048, hop_length=512,
+               window_name=None, pad_end=False,
+               input_data_format='channels_last', output_data_format='channels_last',
+               input_shape=input_shape)(inputs)
+    stft = stft[:-1, :-1, :] / -80.
+    encoded_bottom = bottom_encoder(stft) # (1024, 88, 2) => (256, 22, 128)
     encoded_top = top_encoder(encoded_bottom) # (256, 22, 128) => (128, 11, 128)
     
     # get top encoding ready for quantization
@@ -276,18 +282,18 @@ class VQVAETrainer(keras.models.Model):
         }
         
 
-    def train_step(self, data):
-        x_clean, x_noised = data
+    def train_step(self, x):
+        # x_clean, x_noised = data
         
-        if self.mode == "reconstruction":
-            x, x_ = x_clean, x_clean
-        elif self.mode == "restoration":
-            x_ = x_noised
-            x = x_clean
+        # if self.mode == "reconstruction":
+        #     x, x_ = x_clean, x_clean
+        # elif self.mode == "restoration":
+        #     x_ = x_noised
+        #     x = x_clean
             
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
-            reconstructions = self.vqvae(x_)
+            reconstructions = self.vqvae(x)
 
             # Calculate the losses.
             reconstruction_loss = (

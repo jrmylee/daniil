@@ -1,6 +1,6 @@
 from models.vqvae2 import *
 import tensorflow as tf
-from loader import get_dataset, split_data, load_audio
+from loader import get_audio_dataset, split_audio_dataset, load_audio
 import datetime
 import json
 from types import SimpleNamespace
@@ -16,8 +16,8 @@ with open("config.json") as file:
     mirrored_strategy = tf.distribute.MirroredStrategy()
     batch_size *= mirrored_strategy.num_replicas_in_sync
 
-    dataset = get_dataset(ds_dir=os.path.join(hparams.dataset_dir, "original"),augmented_dir=os.path.join(hparams.dataset_dir, "echoed"))
-    train_set, test_set = split_data(dataset, batch_size=batch_size)
+    dataset = get_audio_dataset("/Users/llewyn/Documents/data/audio/maestro-v3.0.0", "maestro-v3.0.0.csv")
+    train_set, test_set = split_audio_dataset(dataset, batch_size=batch_size)
 
     with mirrored_strategy.scope():
         # Model Definitions
