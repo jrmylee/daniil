@@ -26,7 +26,7 @@ with open("config.json") as file:
 
         vqvae_trainer.set_mode("restoration")
 
-        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_model_2")
+        checkpoint_filepath = os.path.join(hparams.model_save_dir, "audio_reconstruction_model")
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,
