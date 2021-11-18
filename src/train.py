@@ -33,4 +33,4 @@ with open("config.json") as file:
             save_best_only=True,
             monitor='loss')
 
-        vqvae_trainer.fit(train_set, epochs=epochs,validation_data=test_set, callbacks=[checkpoint_filepath])
+        vqvae_trainer.fit(train_set, epochs=epochs,validation_data=test_set, callbacks=[model_checkpoint_callback])
