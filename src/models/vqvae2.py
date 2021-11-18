@@ -254,21 +254,21 @@ class VQVAETrainer(keras.models.Model):
         return decoder(quantized)
 
     def test_step(self, x):
-        # x_clean, x_noised = data
+        x = tf.squeeze(x, axis=0)
+        stft = self.STFT_Layer(x)
+        stft = stft[:, :, :-1, :]
 
-        # if self.mode == "reconstruction":
-        #     x, x_ = x_clean, x_clean
-        # elif self.mode == "restoration":
-        #     x_ = x_noised
-        #     x = x_clean
+        phase = self.Phase_layer(stft) # (88, 1024, 1)
+        mag = self.Mag_Layer(stft)
+        decibel = self.Decibel_Layer(tf.math.square(mag)) / -80.
 
-        reconstructions = self.vqvae(x)
-
-        # Calculate the losses.
+        # Outputs from the VQ-VAE.
+        recon_decibel = self.vqvae(decibel)
         reconstruction_loss = (
-            tf.reduce_mean((x - reconstructions) ** 2)
+            tf.reduce_mean((decibel - recon_decibel) ** 2)
         )
         total_loss = reconstruction_loss + sum(self.vqvae.losses)
+        
         self.valid_loss_tracker.update_state(total_loss)
         self.valid_reconstruction_loss_tracker.update_state(reconstruction_loss)
         self.valid_vq_loss_tracker.update_state(sum(self.vqvae.losses))
