@@ -16,7 +16,7 @@ with open("config.json") as file:
     mirrored_strategy = tf.distribute.MirroredStrategy()
     batch_size *= mirrored_strategy.num_replicas_in_sync
 
-    dataset = get_audio_dataset("/Users/llewyn/Documents/data/audio/maestro-v3.0.0", "maestro-v3.0.0.csv")
+    dataset = get_audio_dataset(hparams.audio_dir, hparams.mapping_file)
     train_set, test_set = split_audio_dataset(dataset, batch_size=batch_size)
 
     with mirrored_strategy.scope():
