@@ -5,7 +5,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 import tensorflow as tf
 from kapre.composed import get_stft_magnitude_layer
-from kapre.time_frequency import STFT, InverseSTFT, Magnitude, Phase
+from kapre.time_frequency import STFT, InverseSTFT, Magnitude, Phase, MagnitudeToDecibel
 class VectorQuantizer(layers.Layer):
     def __init__(self, num_embeddings, embedding_dim, beta=2, **kwargs):
         super().__init__(**kwargs)
@@ -214,6 +214,7 @@ class VQVAETrainer(keras.models.Model):
                 input_shape=(88, 1024, 1))
         self.Mag_Layer = Magnitude()
         self.Phase_layer = Phase()
+        self.Decibel_Layer = MagnitudeToDecibel()
 
         self.Slice_Layer = keras.layers.Lambda(lambda x : x[:, :-1,:])
 
@@ -284,20 +285,21 @@ class VQVAETrainer(keras.models.Model):
         sin_phase = tf.math.sin(phase)
         r= tf.complex(mag*cos_phase, mag*sin_phase)
         return  r
+
     def train_step(self, x):
         x = tf.squeeze(x, axis=0)
         stft = self.STFT_Layer(x)
         stft = stft[:, :, :-1, :]
-        # phase = self.Phase_layer(stft) # (87, 1025, 1)
+
+        phase = self.Phase_layer(stft) # (88, 1024, 1)
+        mag = self.Mag_Layer(stft)
+        decibel = self.Decibel_Layer(mag)
+
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
-            mag = self.Mag_Layer(stft)
-            recon_mag = self.vqvae(mag)
-            # recon_stft = self.mag_phase_2_real_imag(recon_mag, phase)
-            #recon_audio = self.ISTFT_Layer(recon_stft)
-            # Calculate the losses.
+            recon_decibel = self.vqvae(decibel)
             reconstruction_loss = (
-                tf.reduce_mean((mag - recon_mag) ** 2)
+                tf.reduce_mean((decibel - recon_decibel) ** 2)
             )
             total_loss = reconstruction_loss + sum(self.vqvae.losses)
 
