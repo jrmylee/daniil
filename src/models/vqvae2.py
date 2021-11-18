@@ -5,7 +5,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 import tensorflow as tf
 from kapre.composed import get_stft_magnitude_layer
-
+from kapre.time_frequency import STFT, InverseSTFT, Magnitude, Phase
 class VectorQuantizer(layers.Layer):
     def __init__(self, num_embeddings, embedding_dim, beta=2, **kwargs):
         super().__init__(**kwargs)
@@ -88,12 +88,12 @@ def residual_block(x, in_channel, channel, kernel_size=3):
 
 def get_encoder(in_channel, out_channel, n_res_block, n_res_channel, stride):
     if stride == 4:
-        encoder_inputs = keras.Input(shape=(1024, 88, in_channel))
+        encoder_inputs = keras.Input(shape=(87, 1024, in_channel))
         x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=2, padding="same")(encoder_inputs)
         x = layers.Conv2D(out_channel, 4, activation="relu", strides=2, padding="same")(x)
         x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
     elif stride == 2:
-        encoder_inputs = keras.Input(shape=(256, 88 // 4, in_channel))
+        encoder_inputs = keras.Input(shape=(88//4, 256, in_channel))
         x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=2, padding="same")(encoder_inputs)
         x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
     
@@ -110,9 +110,9 @@ def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, st
     # get rid of this hard coded stuff
     
     if stride == 2: # top decoder
-        input_shape = (128, 11, in_channel)
+        input_shape = (11, 128, in_channel)
     elif stride == 4: # bottom decoder
-        input_shape = (256, 22, in_channel)
+        input_shape = (22, 256, in_channel)
     latent_inputs = keras.Input(input_shape) # (freq, frames, n_emb)
     
     x = layers.Conv2D(channel, 3, activation="relu", padding="same")(latent_inputs)
@@ -127,7 +127,6 @@ def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, st
         decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(x)
         
     return keras.Model(latent_inputs, decoder_outputs)
-
 def get_vqvae(embed_dim=64, n_embed=512):    
     in_channel = 1
     channel = 128
@@ -158,14 +157,10 @@ def get_vqvae(embed_dim=64, n_embed=512):
     
     
     # --------------- Model Definition ----------------
-    input_shape = (2048 * 22, 1)
+    input_shape = (87, 1024, 1)
     inputs = keras.Input(shape=input_shape)
-    stft = get_stft_magnitude_layer(n_fft=2048, win_length=2048, hop_length=512,
-               window_name=None, pad_end=False,
-               input_data_format='channels_last', output_data_format='channels_last',
-               input_shape=input_shape)(inputs)
-    stft = stft[:-1, :-1, :] / -80.
-    encoded_bottom = bottom_encoder(stft) # (1024, 88, 2) => (256, 22, 128)
+    
+    encoded_bottom = bottom_encoder(inputs) # (1024, 88, 2) => (256, 22, 128)
     encoded_top = top_encoder(encoded_bottom) # (256, 22, 128) => (128, 11, 128)
     
     # get top encoding ready for quantization
@@ -208,8 +203,20 @@ class VQVAETrainer(keras.models.Model):
         self.valid_vq_loss_tracker = keras.metrics.Mean(name="val_vq_loss")
 
         self.prequantize_top = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_23").output)
-        self.prequantize_bot = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_24").output)	
+        self.prequantize_bot = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_24").output)
         self.mode = mode
+
+        self.STFT_Layer = STFT(n_fft=2048, win_length=2048, hop_length=512,
+               window_name=None, pad_end=False, pad_begin=True,
+               input_data_format='channels_last', output_data_format='channels_last',
+               input_shape=(2048 * 22, 1))
+        self.ISTFT_Layer = InverseSTFT(n_fft=2048, hop_length=512, 
+                input_shape=(88, 1024, 1))
+        self.Mag_Layer = Magnitude()
+        self.Phase_layer = Phase()
+
+        self.Slice_Layer = keras.layers.Lambda(lambda x : x[:, :-1,:])
+
 
     @property
     def metrics(self):
@@ -229,10 +236,10 @@ class VQVAETrainer(keras.models.Model):
     def top_and_bottom_indices(self, x):
         pretop = self.prequantize_top(x)
         prebot = self.prequantize_bot(x)
-        
+
         top_quantizer = self.vqvae.get_layer("vector_quantizer")
         bot_quantizer = self.vqvae.get_layer("vector_quantizer_1")
-        
+
         top_i = self.get_code_indices(top_quantizer, pretop)
         bot_i = self.get_code_indices(bot_quantizer, prebot)
         return top_i, bot_i
@@ -244,26 +251,17 @@ class VQVAETrainer(keras.models.Model):
         decoder = self.vqvae.get_layer("model_3")
 
         return decoder(quantized)
-    
-    def decode_code(self, code_top, code_bot):
-        top_quantizer = self.vqvae.get_layer("vector_quantizer")
-        bot_quantizer = self.vqvae.get_layer("vector_quantizer_1")
 
-        quant_top = top_quantizer.get_quantized(code_top, (1, 128, 11, 64))
-        quant_bot = bot_quantizer.get_quantized(code_bot, (1, 256, 22, 64))
+    def test_step(self, x):
+        # x_clean, x_noised = data
 
-        return self.decode(quant_top, quant_bot)
+        # if self.mode == "reconstruction":
+        #     x, x_ = x_clean, x_clean
+        # elif self.mode == "restoration":
+        #     x_ = x_noised
+        #     x = x_clean
 
-    def test_step(self, data):
-        x_clean, x_noised = data
-        
-        if self.mode == "reconstruction":
-            x, x_ = x_clean, x_clean
-        elif self.mode == "restoration":
-            x_ = x_noised
-            x = x_clean
-        
-        reconstructions = self.vqvae(x_)
+        reconstructions = self.vqvae(x)
 
         # Calculate the losses.
         reconstruction_loss = (
@@ -280,24 +278,32 @@ class VQVAETrainer(keras.models.Model):
             "reconstruction_loss": self.valid_reconstruction_loss_tracker.result(),
             "vqvae_loss": self.valid_vq_loss_tracker.result(),
         }
-        
+
 
     def train_step(self, x):
         # x_clean, x_noised = data
-        
+
         # if self.mode == "reconstruction":
         #     x, x_ = x_clean, x_clean
         # elif self.mode == "restoration":
         #     x_ = x_noised
         #     x = x_clean
-            
+        stft = self.STFT_Layer(x)
+        stft = stft[:, :-1, :]
+        mag = self.Mag_Layer(stft)
+        phase = self.Phase_layer(stft) # (87, 1025, 1)
+
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
-            reconstructions = self.vqvae(x)
+            recon_mag = self.vqvae(mag)
+            recon_mag = recon_mag[:-1, :, :] # (87, 1024, 1)
+
+            recon_stft = recon_mag * tf.math.exp(phase[:, :-1, 1])
+            recon_audio = self.ISTFT_Layer(recon_stft)
 
             # Calculate the losses.
             reconstruction_loss = (
-                tf.reduce_mean((x - reconstructions) ** 2)
+                tf.reduce_mean((x - recon_audio) ** 2)
             )
             total_loss = reconstruction_loss + sum(self.vqvae.losses)
 
