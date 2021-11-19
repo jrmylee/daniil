@@ -1,2 +1,2 @@
-model_checkpoint_path: "recon_model_2"
-all_model_checkpoint_paths: "recon_model_2"
+model_checkpoint_path: "audio_reconstruction_model"
+all_model_checkpoint_paths: "audio_reconstruction_model"
