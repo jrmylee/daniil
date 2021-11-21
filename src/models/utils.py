@@ -2,7 +2,6 @@ import librosa
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 from kapre.time_frequency import STFT, InverseSTFT, Magnitude, Phase, MagnitudeToDecibel
 
 def P2R(radii, angles):
