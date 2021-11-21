@@ -1,13 +1,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
 from tensorflow import keras
 from tensorflow.keras import layers
 import tensorflow as tf
 from kapre.composed import get_stft_magnitude_layer
 from kapre.time_frequency import STFT, InverseSTFT, Magnitude, Phase, MagnitudeToDecibel
+
+from .utils import db_to_magnitude
+
 class VectorQuantizer(layers.Layer):
-    def __init__(self, num_embeddings, embedding_dim, beta=2, **kwargs):
+    def __init__(self, num_embeddings, embedding_dim, beta=.25, **kwargs):
         super().__init__(**kwargs)
         self.embedding_dim = embedding_dim
         self.num_embeddings = num_embeddings
@@ -253,6 +255,12 @@ class VQVAETrainer(keras.models.Model):
 
         return decoder(quantized)
 
+    def mag_phase_2_real_imag(self, mag, phase):      
+        cos_phase = tf.math.cos(phase)
+        sin_phase = tf.math.sin(phase)
+        r= tf.complex(mag*cos_phase, mag*sin_phase)
+        return  r
+
     def test_step(self, x):
         x = tf.squeeze(x, axis=0)
         stft = self.STFT_Layer(x)
@@ -260,14 +268,19 @@ class VQVAETrainer(keras.models.Model):
 
         phase = self.Phase_layer(stft) # (88, 1024, 1)
         mag = self.Mag_Layer(stft)
-        decibel = self.Decibel_Layer(tf.math.square(mag)) / -80.
+        decibel = self.Decibel_Layer(tf.math.square(mag)) / 80.
 
         # Outputs from the VQ-VAE.
         recon_decibel = self.vqvae(decibel)
+
+        recon_mag = db_to_magnitude(recon_decibel * 80.)
+        recon_x = self.ISTFT_Layer(self.mag_phase_2_real_imag(recon_mag, phase))
+        recon_x = recon_x[:, :2048 * 22, :]
+
         reconstruction_loss = (
             tf.reduce_mean((decibel - recon_decibel) ** 2)
         )
-        total_loss = reconstruction_loss + sum(self.vqvae.losses)
+        total_loss = reconstruction_loss + sum(self.vqvae.losses) + (x - recon_x) ** 2
         
         self.valid_loss_tracker.update_state(total_loss)
         self.valid_reconstruction_loss_tracker.update_state(reconstruction_loss)
@@ -279,13 +292,7 @@ class VQVAETrainer(keras.models.Model):
             "reconstruction_loss": self.valid_reconstruction_loss_tracker.result(),
             "vqvae_loss": self.valid_vq_loss_tracker.result(),
         }
-
-    def mag_phase_2_real_imag(self, mag, phase):      
-        cos_phase = tf.math.cos(phase)
-        sin_phase = tf.math.sin(phase)
-        r= tf.complex(mag*cos_phase, mag*sin_phase)
-        return  r
-
+    
     def train_step(self, x):
         x = tf.squeeze(x, axis=0)
         stft = self.STFT_Layer(x)
@@ -293,15 +300,19 @@ class VQVAETrainer(keras.models.Model):
 
         phase = self.Phase_layer(stft) # (88, 1024, 1)
         mag = self.Mag_Layer(stft)
-        decibel = self.Decibel_Layer(tf.math.square(mag)) / -80.
-
+        decibel = self.Decibel_Layer(tf.math.square(mag)) / 80.
+        
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
             recon_decibel = self.vqvae(decibel)
+            
+            recon_mag = db_to_magnitude(recon_decibel * 80.)
+            recon_x = self.ISTFT_Layer(self.mag_phase_2_real_imag(recon_mag, phase))
+            recon_x = recon_x[:, :2048 * 22, :]
             reconstruction_loss = (
                 tf.reduce_mean((decibel - recon_decibel) ** 2)
             )
-            total_loss = reconstruction_loss + sum(self.vqvae.losses)
+            total_loss = reconstruction_loss + sum(self.vqvae.losses) + (x - recon_x) ** 2
 
         # Backpropagation.
         grads = tape.gradient(total_loss, self.vqvae.trainable_variables)
