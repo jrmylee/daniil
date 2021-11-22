@@ -129,7 +129,7 @@ def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, st
         decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(x)
         
     return keras.Model(latent_inputs, decoder_outputs)
-def get_vqvae(embed_dim=64, n_embed=512):    
+def get_vqvae(embed_dim=256, n_embed=512):    
     in_channel = 1
     channel = 128
     n_res_block, n_res_channel = 2, 32
@@ -261,27 +261,30 @@ class VQVAETrainer(keras.models.Model):
         r= tf.complex(mag*cos_phase, mag*sin_phase)
         return  r
 
-    def test_step(self, x):
-        x = tf.squeeze(x, axis=0)
-        stft = self.STFT_Layer(x)
-        stft = stft[:, :, :-1, :]
+    def test_step(self, data):
+        x_clean, x_reverb = data[:, :, 0], data[:, :, 1]
+        x_clean, x_reverb = tf.expand_dims(x_clean, axis=2), tf.expand_dims(x_reverb, axis=2)
 
-        phase = self.Phase_layer(stft) # (88, 1024, 1)
-        mag = self.Mag_Layer(stft)
-        decibel = self.Decibel_Layer(tf.math.square(mag)) / 80.
+        stft_clean, stft_reverb = self.STFT_Layer(x_clean), self.STFT_Layer(x_reverb)
+        stft_clean, stft_reverb = stft_clean[:, :, :-1, :], stft_reverb[:, :, :-1, :]
+
+        phase_clean, phase_reverb = self.Phase_layer(stft_clean), self.Phase_layer(stft_reverb) # (88, 1024, 1)
+        mag_clean, mag_reverb = self.Mag_Layer(stft_clean), self.Mag_Layer(stft_reverb)
+        
+        decibel_clean, decibel_reverb = self.Decibel_Layer(tf.math.square(mag_clean)) / 80., self.Decibel_Layer(tf.math.square(mag_reverb)) / 80.
+        
 
         # Outputs from the VQ-VAE.
-        recon_decibel = self.vqvae(decibel)
-
+        recon_decibel = self.vqvae(decibel_reverb)
+            
         recon_mag = db_to_magnitude(recon_decibel * 80.)
-        recon_x = self.ISTFT_Layer(self.mag_phase_2_real_imag(recon_mag, phase))
+        recon_x = self.ISTFT_Layer(self.mag_phase_2_real_imag(recon_mag, phase_clean))
         recon_x = recon_x[:, :2048 * 22, :]
-
         reconstruction_loss = (
-            tf.reduce_mean((decibel - recon_decibel) ** 2)
+            tf.reduce_mean((decibel_clean - recon_decibel) ** 2)
         )
-        total_loss = reconstruction_loss + sum(self.vqvae.losses) + (x - recon_x) ** 2
-        
+        total_loss = reconstruction_loss + sum(self.vqvae.losses) + (x_clean - recon_x) ** 2
+    
         self.valid_loss_tracker.update_state(total_loss)
         self.valid_reconstruction_loss_tracker.update_state(reconstruction_loss)
         self.valid_vq_loss_tracker.update_state(sum(self.vqvae.losses))
@@ -293,26 +296,29 @@ class VQVAETrainer(keras.models.Model):
             "vqvae_loss": self.valid_vq_loss_tracker.result(),
         }
     
-    def train_step(self, x):
-        x = tf.squeeze(x, axis=0)
-        stft = self.STFT_Layer(x)
-        stft = stft[:, :, :-1, :]
+    def train_step(self, data):
+        x_clean, x_reverb = data[:, :, 0], data[:, :, 1]
+        x_clean, x_reverb = tf.expand_dims(x_clean, axis=2), tf.expand_dims(x_reverb, axis=2)
 
-        phase = self.Phase_layer(stft) # (88, 1024, 1)
-        mag = self.Mag_Layer(stft)
-        decibel = self.Decibel_Layer(tf.math.square(mag)) / 80.
+        stft_clean, stft_reverb = self.STFT_Layer(x_clean), self.STFT_Layer(x_reverb)
+        stft_clean, stft_reverb = stft_clean[:, :, :-1, :], stft_reverb[:, :, :-1, :]
+
+        phase_clean, phase_reverb = self.Phase_layer(stft_clean), self.Phase_layer(stft_reverb) # (88, 1024, 1)
+        mag_clean, mag_reverb = self.Mag_Layer(stft_clean), self.Mag_Layer(stft_reverb)
+        
+        decibel_clean, decibel_reverb = self.Decibel_Layer(tf.math.square(mag_clean)) / 80., self.Decibel_Layer(tf.math.square(mag_reverb)) / 80.
         
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
-            recon_decibel = self.vqvae(decibel)
+            recon_decibel = self.vqvae(decibel_reverb)
             
             recon_mag = db_to_magnitude(recon_decibel * 80.)
-            recon_x = self.ISTFT_Layer(self.mag_phase_2_real_imag(recon_mag, phase))
+            recon_x = self.ISTFT_Layer(self.mag_phase_2_real_imag(recon_mag, phase_clean))
             recon_x = recon_x[:, :2048 * 22, :]
             reconstruction_loss = (
-                tf.reduce_mean((decibel - recon_decibel) ** 2)
+                tf.reduce_mean((decibel_clean - recon_decibel) ** 2)
             )
-            total_loss = reconstruction_loss + sum(self.vqvae.losses) + (x - recon_x) ** 2
+            total_loss = reconstruction_loss + sum(self.vqvae.losses) + (x_clean - recon_x) ** 2
 
         # Backpropagation.
         grads = tape.gradient(total_loss, self.vqvae.trainable_variables)
