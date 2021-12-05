@@ -57,9 +57,9 @@ def read_audio(item):
             arr.append(y)
         return np.array(arr)
     x, sr = librosa.load(item, sr=44100, mono=True)
-    y = convolve_with_room(x, random.choice(irs))[:len(x)]
+    # y = convolve_with_room(x, random.choice(irs))[:len(x)]
     
-    x_chunks, y_chunks = chunk(x), chunk(y)
+    x_chunks, y_chunks = chunk(x), chunk(x)
     data = np.stack([x_chunks, y_chunks], axis=2)
         
     return data.astype(np.float32)

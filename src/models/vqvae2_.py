@@ -146,8 +146,8 @@ def get_vqvae(embed_dim=64, n_embed=512):
     decoder = get_decoder(embed_dim + embed_dim, in_channel, channel, n_res_block, n_res_channel, stride=4)
      
     # --- Pre Quantization Layers ---
-    pre_quantized_top = layers.Conv2D(embed_dim, 1, padding="same")
-    pre_quantized_bottom = layers.Conv2D(embed_dim, 1, padding="same")
+    pre_quantized_top = layers.Conv2D(embed_dim, 1, padding="same", name="prequant_top")
+    pre_quantized_bottom = layers.Conv2D(embed_dim, 1, padding="same", name="prequant_bot")
     
     # --- Quantization Layers ---
     quantize_top = VectorQuantizer(n_embed, embed_dim)
@@ -201,8 +201,8 @@ class VQVAETrainer(keras.models.Model):
         )
         self.valid_vq_loss_tracker = keras.metrics.Mean(name="val_vq_loss")
 
-        self.prequantize_top = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_23").output)
-        self.prequantize_bot = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_24").output)	
+        self.prequantize_top = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("prequant_top").output)
+        self.prequantize_bot = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("prequant_bot").output)	
         self.mode = mode
 
     @property

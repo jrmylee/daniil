@@ -29,7 +29,7 @@ with open("config.json") as file:
         log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
     
-        checkpoint_filepath = os.path.join(hparams.model_save_dir, "audio_reconstruction_model_2")
+        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_01")
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,
