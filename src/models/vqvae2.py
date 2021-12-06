@@ -276,14 +276,10 @@ class VQVAETrainer(keras.models.Model):
 
         # Outputs from the VQ-VAE.
         recon_decibel = self.vqvae(decibel_reverb)
-            
-        recon_mag = db_to_magnitude(recon_decibel * 80.)
-        recon_x = self.ISTFT_Layer(self.mag_phase_2_real_imag(recon_mag, phase_clean))
-        recon_x = recon_x[:, :2048 * 22, :]
         reconstruction_loss = (
             tf.reduce_mean((decibel_clean - recon_decibel) ** 2)
         )
-        total_loss = reconstruction_loss + sum(self.vqvae.losses) + (x_clean - recon_x) ** 2
+        total_loss = reconstruction_loss + sum(self.vqvae.losses)
     
         self.valid_loss_tracker.update_state(total_loss)
         self.valid_reconstruction_loss_tracker.update_state(reconstruction_loss)
@@ -311,14 +307,10 @@ class VQVAETrainer(keras.models.Model):
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.
             recon_decibel = self.vqvae(decibel_reverb)
-            
-            recon_mag = db_to_magnitude(recon_decibel * 80.)
-            recon_x = self.ISTFT_Layer(self.mag_phase_2_real_imag(recon_mag, phase_clean))
-            recon_x = recon_x[:, :2048 * 22, :]
             reconstruction_loss = (
                 tf.reduce_mean((decibel_clean - recon_decibel) ** 2)
             )
-            total_loss = reconstruction_loss + sum(self.vqvae.losses) + (x_clean - recon_x) ** 2
+            total_loss = reconstruction_loss + sum(self.vqvae.losses)
 
         # Backpropagation.
         grads = tape.gradient(total_loss, self.vqvae.trainable_variables)
