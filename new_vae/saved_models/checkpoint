@@ -1,2 +1,2 @@
-model_checkpoint_path: "audio_restor_model_1"
-all_model_checkpoint_paths: "audio_restor_model_1"
+model_checkpoint_path: "recon_01"
+all_model_checkpoint_paths: "recon_01"
