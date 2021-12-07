@@ -7,9 +7,9 @@ import random
 
 from utils.echo import convolve_with_room, get_room_irs
 
-irs = get_room_irs(100)
-
 AUTOTUNE = tf.data.experimental.AUTOTUNE
+
+ir, sr = librosa.load("./samples/irs/ir1.aif", sr=44100, mono=True)
 
 def get_audio_dataset(ds_path, mapping_filename):
     csv_path = os.path.join(ds_path, mapping_filename)
@@ -57,9 +57,9 @@ def read_audio(item):
             arr.append(y)
         return np.array(arr)
     x, sr = librosa.load(item, sr=44100, mono=True)
-    # y = convolve_with_room(x, random.choice(irs))[:len(x)]
+    y = convolve_with_room(x, ir)[:len(x)]
     
-    x_chunks, y_chunks = chunk(x), chunk(x)
+    x_chunks, y_chunks = chunk(x), chunk(y)
     data = np.stack([x_chunks, y_chunks], axis=2)
         
     return data.astype(np.float32)
