@@ -1,6 +1,7 @@
 import librosa
 import numpy as np
-
+import pandas as pd
+import os
 # returns magnitude and phase matrices of stft(x)
 # in shape of (None, 1024, 88)
 def audio_stfts(x):
@@ -44,3 +45,21 @@ def concat_stft(chunked_stft, chunk_size=88):
         stft[:, i * chunk_size : i*chunk_size + chunk_size] = chunked_stft[i, :, :]
     
     return stft
+
+def load_test_data(ds_path, mapping_filename, num_pieces):    
+    csv_path = os.path.join(ds_path, mapping_filename)
+    csv = pd.read_csv(csv_path)
+    files = []
+    
+    counter = 0
+    for index, row in csv.iterrows():
+        if counter == num_pieces:
+            break
+        full_audio_path = os.path.join(ds_path, row["audio_filename"])
+
+        files.append(full_audio_path)
+        
+        counter += 1
+    
+    pieces = [librosa.load(file, sr=44100)[0] for file in files]
+    return np.array(pieces)
