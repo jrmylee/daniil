@@ -27,6 +27,10 @@ class VectorQuantizer(layers.Layer):
             name="embeddings_vqvae",
         )
 
+        self.embeddings_count = tf.zeros((num_embeddings, ))
+        self.num_iterations = tf.Variable(1, name='num_iterations', trainable=False, dtype=tf.int32)
+        self.reset_threshold = tf.Variable(1e-3, name='threshold', trainable=False, dtype=tf.double)
+
     def get_quantized(self, encoding_indices, input_shape):
         encodings = tf.one_hot(encoding_indices, self.num_embeddings)
         quantized = tf.matmul(encodings, self.embeddings, transpose_b=True)
@@ -36,8 +40,11 @@ class VectorQuantizer(layers.Layer):
     def call(self, x):
         # Calculate the input shape of the inputs and
         # then flatten the inputs keeping `embedding_dim` intact.
+
+        # input shape : (128, 11, embed_dim) or (256, 22, embed_dim)
+        # flattened shape : (128 * 11, embed_dim) or (256 * 22, embed_dim)
         input_shape = tf.shape(x)
-        flattened = tf.reshape(x, [-1, self.embedding_dim])
+        flattened = tf.reshape(x, [-1, self.embedding_dim]) 
 
         # Quantization.
         encoding_indices = self.get_code_indices(flattened)
@@ -59,9 +66,22 @@ class VectorQuantizer(layers.Layer):
         quantized = x + tf.stop_gradient(quantized - x)
         return quantized
 
+    def update_columns(self, variable, columns, updates):
+        value = tf.expand_dims(updates,1)
+        columns = tf.convert_to_tensor(columns)
+        rows = tf.range(tf.shape(variable)[0], dtype=columns.dtype)
+        ii, jj = tf.meshgrid(rows, columns, indexing='ij')
+        value = tf.broadcast_to(value, tf.shape(ii))
+        return tf.tensor_scatter_nd_update(variable, tf.stack([ii, jj], axis=-1), value)
+
     def get_code_indices(self, flattened_inputs):
         # Calculate L2-normalized distance between the inputs and the codes.
+        # (128 * 11, embed_dim) * (embed_dim, num_embeddings)
+        # similarity shape : (128 * 11, num_embeddings)
         similarity = tf.matmul(flattened_inputs, self.embeddings)
+        # first reduce sum (128 * 11, 1) due to keep dims
+        # second reduce sum (1, num_embedding)
+        # similarity is 128 * 11, num_embeddings
         distances = (
             tf.reduce_sum(flattened_inputs ** 2, axis=1, keepdims=True)
             + tf.reduce_sum(self.embeddings ** 2, axis=0)
@@ -69,7 +89,17 @@ class VectorQuantizer(layers.Layer):
         )
 
         # Derive the indices for minimum distances.
+        # shape: (128 * 11,) or (256 * 22,)
         encoding_indices = tf.argmin(distances, axis=1)
+
+        # codebook collapse safe
+        if flattened_inputs.shape[0] != None:
+            self.num_iterations.assign_add(flattened_inputs.shape[0])
+            for index in tf.unstack(encoding_indices):
+                self.embeddings_count[index].assign(self.embeddings_count[index] + 1)
+                if self.embeddings_count[index] / self.num_iterations < self.reset_threshold:
+                    rand_index = tf.random.uniform(shape=[], minval=0, maxval=flattened_inputs.shape[0], dtype=tf.int64)
+                    self.embeddings = self.update_columns(self.embeddings, index, flattened_inputs[rand_index])
         return encoding_indices
 
 def residual_block(x, in_channel, channel, kernel_size=3):
@@ -129,7 +159,7 @@ def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, st
         decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(x)
         
     return keras.Model(latent_inputs, decoder_outputs)
-def get_vqvae(embed_dim=256, n_embed=512):    
+def get_vqvae(embed_dim, n_embed):    
     in_channel = 1
     channel = 128
     n_res_block, n_res_channel = 2, 32
@@ -166,20 +196,20 @@ def get_vqvae(embed_dim=256, n_embed=512):
     encoded_top = top_encoder(encoded_bottom) # (256, 22, 128) => (128, 11, 128)
     
     # get top encoding ready for quantization
-    pre_quant_top = pre_quantized_top(encoded_top) # (128, 11, 128) => (128, 11, 64)
-    quantized_top = quantize_top(pre_quant_top) # (128, 11, 64)
+    pre_quant_top = pre_quantized_top(encoded_top) # (128, 11, 128) => (128, 11, embed_dim)
+    quantized_top = quantize_top(pre_quant_top) # (128, 11, embed_dim)
     
     # Decode the top, and encode bottom layer with it
     decoded_top = top_decoder(quantized_top) # (128, 11, 64) => (256, 22, 2)
     encoded_bottom = layers.Concatenate(axis=3)([decoded_top, encoded_bottom]) # (256, 22, 130)
     
     # Get bottom encoding ready for quantization
-    pre_quant_bottom = pre_quantized_bottom(encoded_bottom) # (256, 22, 130) => (256, 22, 64)
-    quantized_bottom = quantize_bottom(pre_quant_bottom) # (256, 22, 64)
+    pre_quant_bottom = pre_quantized_bottom(encoded_bottom) # (256, 22, 130) => (256, 22, embed_dim)
+    quantized_bottom = quantize_bottom(pre_quant_bottom) # (256, 22, embed_dim)
     
     # Use quantized top and bottom to decode
-    upsampled_top = upsample_top(quantized_top) # (128, 11, 64) => (256, 22 , 64)
-    quantized = layers.Concatenate(axis=3)([upsampled_top, quantized_bottom]) # (256, 22, 128)
+    upsampled_top = upsample_top(quantized_top) # (128, 11, 64) => (256, 22 , embed_dim)
+    quantized = layers.Concatenate(axis=3)([upsampled_top, quantized_bottom]) # (256, 22, embed_dim + embed_dim)
     
     # Some magic
     reconstructions = decoder(quantized) # (256, 22, 128) = > (1024, 88, 2)
@@ -190,7 +220,7 @@ class VQVAETrainer(keras.models.Model):
     def __init__(self, latent_dim, num_embeddings, mode="reconstruction", **kwargs):
         super(VQVAETrainer, self).__init__(**kwargs)
 
-        self.vqvae = get_vqvae()
+        self.vqvae = get_vqvae(latent_dim, num_embeddings)
 
         self.total_loss_tracker = keras.metrics.Mean(name="total_loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(

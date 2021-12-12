@@ -21,7 +21,7 @@ with open("config.json") as file:
 
     with mirrored_strategy.scope():
         # Model Definitions
-        vqvae_trainer = VQVAETrainer(latent_dim=None, num_embeddings=None)
+        vqvae_trainer = VQVAETrainer(latent_dim=128, num_embeddings=128)
         vqvae_trainer.compile(optimizer=keras.optimizers.Adam(learning_rate=hparams.learning_rate))
 
         vqvae_trainer.set_mode("restoration")
