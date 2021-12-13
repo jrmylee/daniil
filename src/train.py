@@ -1,4 +1,5 @@
 from models.vqvae2 import *
+from models.callbacks.QuantizerCallback import QuantizerCallback
 import tensorflow as tf
 from loader import get_audio_dataset, split_audio_dataset, load_audio
 import datetime
@@ -26,14 +27,21 @@ with open("config.json") as file:
 
         vqvae_trainer.set_mode("restoration")
 
+        # Tensorboard Callback
         log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
     
-        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_02")
+        # Checkpoint Callback
+        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_03")
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,
             save_best_only=True,
             monitor='loss')
 
-        vqvae_trainer.fit(train_set, epochs=epochs,validation_data=test_set, callbacks=[model_checkpoint_callback, tensorboard_callback])
+        # Quantizer Callback, this prints the embedding code frequency
+        quantizer_callback = QuantizerCallback()
+
+        callbacks = [model_checkpoint_callback, tensorboard_callback, quantizer_callback]
+
+        vqvae_trainer.fit(train_set, epochs=epochs, validation_data=test_set, callbacks=callbacks)

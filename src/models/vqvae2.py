@@ -246,7 +246,6 @@ class VQVAETrainer(keras.models.Model):
                 input_shape=(88, 1024, 1))
         self.Mag_Layer = Magnitude()
         self.Phase_layer = Phase()
-        self.Decibel_Layer = MagnitudeToDecibel()
 
         self.Slice_Layer = keras.layers.Lambda(lambda x : x[:, :-1,:])
 
@@ -301,7 +300,10 @@ class VQVAETrainer(keras.models.Model):
         phase_clean, phase_reverb = self.Phase_layer(stft_clean), self.Phase_layer(stft_reverb) # (88, 1024, 1)
         mag_clean, mag_reverb = self.Mag_Layer(stft_clean), self.Mag_Layer(stft_reverb)
         
-        decibel_clean, decibel_reverb = self.Decibel_Layer(tf.math.square(mag_clean)) / 80., self.Decibel_Layer(tf.math.square(mag_reverb)) / 80.
+        clean_db = MagnitudeToDecibel(ref_value=tf.math.reduce_max(mag_clean) ** 2, amin=1e-5 ** 2)
+        reverb_db = MagnitudeToDecibel(ref_value=tf.math.reduce_max(mag_reverb) ** 2, amin=1e-5 ** 2)
+
+        decibel_clean, decibel_reverb = clean_db(tf.math.square(mag_clean)) / -80., reverb_db(tf.math.square(mag_reverb)) / -80.
         
 
         # Outputs from the VQ-VAE.
@@ -332,7 +334,10 @@ class VQVAETrainer(keras.models.Model):
         phase_clean, phase_reverb = self.Phase_layer(stft_clean), self.Phase_layer(stft_reverb) # (88, 1024, 1)
         mag_clean, mag_reverb = self.Mag_Layer(stft_clean), self.Mag_Layer(stft_reverb)
         
-        decibel_clean, decibel_reverb = self.Decibel_Layer(tf.math.square(mag_clean)) / 80., self.Decibel_Layer(tf.math.square(mag_reverb)) / 80.
+        clean_db = MagnitudeToDecibel(ref_value=tf.math.reduce_max(mag_clean) ** 2, amin=1e-5 ** 2)
+        reverb_db = MagnitudeToDecibel(ref_value=tf.math.reduce_max(mag_reverb) ** 2, amin=1e-5 ** 2)
+
+        decibel_clean, decibel_reverb = clean_db(tf.math.square(mag_clean)) / -80., reverb_db(tf.math.square(mag_reverb)) / -80.
         
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE.

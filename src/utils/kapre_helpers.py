@@ -15,7 +15,7 @@ def reconstruct_audio(chunked_mag, chunked_angle, scaling_factor=-80.):
         
     db, angles = concat_stft(chunked_mag * scaling_factor), concat_stft(chunked_angle)
     db, angles = np.swapaxes(db, 0, 1), np.swapaxes(angles, 0, 1)
-    stfts = P2R(librosa.db_to_amplitude(db), angles)
+    stfts = P2R(librosa.db_to_amplitude(db, ref=200.), angles)
     audio = librosa.istft(stfts)
     return audio
 
@@ -34,7 +34,7 @@ def concat_stft(chunked_stft, chunk_size=88):
     
     return stft
 
-def kapre_stft(x):
+def kapre_stft(x, scaling_factor=-80.):
     x = np.expand_dims(x, 0)
     x = np.expand_dims(x, 2)
     STFT_Layer = STFT(n_fft=2048, win_length=2048, hop_length=512,
@@ -45,11 +45,12 @@ def kapre_stft(x):
             input_shape=(88, 1024, 1))
     Mag_Layer = Magnitude()
     Phase_Layer = Phase()
-    Decibel_Layer = MagnitudeToDecibel()
     
     stft = STFT_Layer(x)
     mag = Mag_Layer(stft)
-    dec = Decibel_Layer(tf.math.square(mag)) / 80.
+
+    Decibel_Layer = MagnitudeToDecibel(ref_value=tf.math.reduce_max(mag) ** 2, amin=1e-5 ** 2)
+    dec = Decibel_Layer(tf.math.square(mag)) / scaling_factor
     angle = Phase_Layer(stft)
     
     dec = dec.numpy().reshape(dec.shape[1], dec.shape[2])
