@@ -27,7 +27,7 @@ class VectorQuantizer(layers.Layer):
             name="embeddings_vqvae",
         )
 
-        self.embeddings_count = tf.Variable([0] * num_embeddings)
+        self.embeddings_count = tf.Variable([0] * num_embeddings, name='num_emb', trainable=False, dtype=tf.int32)
         self.num_iterations = tf.Variable(1, name='num_iterations', trainable=False, dtype=tf.int32)
         self.reset_threshold = tf.Variable(1e-3, name='threshold', trainable=False, dtype=tf.double)
 
