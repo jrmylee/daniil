@@ -27,9 +27,9 @@ class VectorQuantizer(layers.Layer):
             name="embeddings_vqvae",
         )
 
-        self.embeddings_count = tf.Variable([0] * num_embeddings, name='num_emb', trainable=False, dtype=tf.int32)
-        self.num_iterations = tf.Variable(1, name='num_iterations', trainable=False, dtype=tf.int32)
-        self.reset_threshold = tf.Variable(1e-3, name='threshold', trainable=False, dtype=tf.double)
+        # self.embeddings_count = tf.Variable([0] * num_embeddings, name='num_emb', trainable=False, dtype=tf.int32)
+        # self.num_iterations = tf.Variable(1, name='num_iterations', trainable=False, dtype=tf.int32)
+        # self.reset_threshold = tf.Variable(1e-3, name='threshold', trainable=False, dtype=tf.double)
 
     def get_quantized(self, encoding_indices, input_shape):
         encodings = tf.one_hot(encoding_indices, self.num_embeddings)
@@ -93,13 +93,13 @@ class VectorQuantizer(layers.Layer):
         encoding_indices = tf.argmin(distances, axis=1)
 
         # codebook collapse safe
-        if flattened_inputs.shape[0] != None:
-            self.num_iterations.assign_add(flattened_inputs.shape[0])
-            for index in tf.unstack(encoding_indices):
-                self.embeddings_count[index].assign(self.embeddings_count[index] + 1)
-                if self.embeddings_count[index] / self.num_iterations < self.reset_threshold:
-                    rand_index = tf.random.uniform(shape=[], minval=0, maxval=flattened_inputs.shape[0], dtype=tf.int64)
-                    self.embeddings = self.update_columns(self.embeddings, index, flattened_inputs[rand_index])
+        # if flattened_inputs.shape[0] != None:
+        #     self.num_iterations.assign_add(flattened_inputs.shape[0])
+        #     for index in tf.unstack(encoding_indices):
+        #         self.embeddings_count[index].assign(self.embeddings_count[index] + 1)
+        #         if self.embeddings_count[index] / self.num_iterations < self.reset_threshold:
+        #             rand_index = tf.random.uniform(shape=[], minval=0, maxval=flattened_inputs.shape[0], dtype=tf.int64)
+        #             self.embeddings = self.update_columns(self.embeddings, index, flattened_inputs[rand_index])
         return encoding_indices
 
 def residual_block(x, in_channel, channel, kernel_size=3):
@@ -300,8 +300,11 @@ class VQVAETrainer(keras.models.Model):
         phase_clean, phase_reverb = self.Phase_layer(stft_clean), self.Phase_layer(stft_reverb) # (88, 1024, 1)
         mag_clean, mag_reverb = self.Mag_Layer(stft_clean), self.Mag_Layer(stft_reverb)
         
-        clean_db = MagnitudeToDecibel(ref_value=tf.math.reduce_max(mag_clean) ** 2, amin=1e-5 ** 2)
-        reverb_db = MagnitudeToDecibel(ref_value=tf.math.reduce_max(mag_reverb) ** 2, amin=1e-5 ** 2)
+        clean_ref = tf.math.ceil(tf.math.reduce_max(mag_clean) ** 2)
+        reverb_ref = tf.math.ceil(tf.math.reduce_max(mag_reverb) ** 2)
+
+        clean_db = MagnitudeToDecibel(ref_value=clean_ref, amin=1e-5 ** 2)
+        reverb_db = MagnitudeToDecibel(ref_value=reverb_ref, amin=1e-5 ** 2)
 
         decibel_clean, decibel_reverb = clean_db(tf.math.square(mag_clean)) / -80., reverb_db(tf.math.square(mag_reverb)) / -80.
         
@@ -334,8 +337,11 @@ class VQVAETrainer(keras.models.Model):
         phase_clean, phase_reverb = self.Phase_layer(stft_clean), self.Phase_layer(stft_reverb) # (88, 1024, 1)
         mag_clean, mag_reverb = self.Mag_Layer(stft_clean), self.Mag_Layer(stft_reverb)
         
-        clean_db = MagnitudeToDecibel(ref_value=tf.math.reduce_max(mag_clean) ** 2, amin=1e-5 ** 2)
-        reverb_db = MagnitudeToDecibel(ref_value=tf.math.reduce_max(mag_reverb) ** 2, amin=1e-5 ** 2)
+        clean_ref = tf.math.ceil(tf.math.reduce_max(mag_clean) ** 2)
+        reverb_ref = tf.math.ceil(tf.math.reduce_max(mag_reverb) ** 2)
+
+        clean_db = MagnitudeToDecibel(ref_value=clean_ref, amin=1e-5 ** 2)
+        reverb_db = MagnitudeToDecibel(ref_value=reverb_ref, amin=1e-5 ** 2)
 
         decibel_clean, decibel_reverb = clean_db(tf.math.square(mag_clean)) / -80., reverb_db(tf.math.square(mag_reverb)) / -80.
         
