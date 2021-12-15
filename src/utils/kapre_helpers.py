@@ -15,7 +15,7 @@ def reconstruct_audio(chunked_mag, chunked_angle, scaling_factor=-80.):
         
     db, angles = concat_stft(chunked_mag * scaling_factor), concat_stft(chunked_angle)
     db, angles = np.swapaxes(db, 0, 1), np.swapaxes(angles, 0, 1)
-    stfts = P2R(librosa.db_to_amplitude(db, ref=200.), angles)
+    stfts = P2R(librosa.db_to_amplitude(db), angles)
     audio = librosa.istft(stfts)
     return audio
 

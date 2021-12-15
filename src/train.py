@@ -32,7 +32,7 @@ with open("config.json") as file:
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
     
         # Checkpoint Callback
-        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_03")
+        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_04")
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,

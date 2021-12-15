@@ -119,17 +119,14 @@ def residual_block(x, in_channel, channel, kernel_size=3):
 
 
 def get_encoder(in_channel, out_channel, n_res_block, n_res_channel, stride):
-    if stride == 16:
+    if stride == 4:
         encoder_inputs = keras.Input(shape=(88, 1024, in_channel))
         x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=2, padding="same")(encoder_inputs)
         x = layers.Conv2D(out_channel, 4, activation="relu", strides=2, padding="same")(x)
-        x = layers.Conv2D(out_channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 128)
-        x = layers.Conv2D(out_channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 64)
-        x = layers.Conv2D(out_channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 32)
         x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
     elif stride == 2:
-        encoder_inputs = keras.Input(shape=(22, 32, in_channel))
-        x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=2, padding="same")(encoder_inputs) # (11, 32)
+        encoder_inputs = keras.Input(shape=(88//4, 256, in_channel))
+        x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=2, padding="same")(encoder_inputs)
         x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
     
     for i in range(n_res_block):
@@ -145,9 +142,9 @@ def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, st
     # get rid of this hard coded stuff
     
     if stride == 2: # top decoder
-        input_shape = (11, 16, in_channel)
-    elif stride == 16: # bottom decoder
-        input_shape = (22, 32, in_channel)
+        input_shape = (11, 128, in_channel)
+    elif stride == 4: # bottom decoder
+        input_shape = (22, 256, in_channel)
     latent_inputs = keras.Input(input_shape) # (freq, frames, n_emb)
     
     x = layers.Conv2D(channel, 3, activation="relu", padding="same")(latent_inputs)
@@ -155,14 +152,11 @@ def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, st
     for i in range(n_res_block):
         x = residual_block(x, channel, n_res_channel)
     
-    if stride == 16:
-        x = layers.Conv2DTranspose(channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 64)
-        x = layers.Conv2DTranspose(channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 128)
-        x = layers.Conv2DTranspose(channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 256)
-        x = layers.Conv2DTranspose(channel // 2, 4, activation="relu", strides=2, padding="same")(x) # (44, 512)
-        decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(x) # (88, 1024)
+    if stride == 4:
+        x = layers.Conv2DTranspose(channel // 2, 4, activation="relu", strides=2, padding="same")(x)
+        decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(x)
     elif stride == 2:
-        decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(x) 
+        decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(x)
         
     return keras.Model(latent_inputs, decoder_outputs)
 def get_vqvae(embed_dim, n_embed):    
@@ -175,12 +169,12 @@ def get_vqvae(embed_dim, n_embed):
     # --- Encoders ---
     # Bottom Encoder takes the original input and outputs one downsampled by 4, with 'channel' channels
     # Top Encoder takes the bottom encoded output and downsamples by 2.
-    bottom_encoder = get_encoder(in_channel, channel, n_res_block, n_res_channel, stride=16)
+    bottom_encoder = get_encoder(in_channel, channel, n_res_block, n_res_channel, stride=4)
     top_encoder = get_encoder(channel, channel, n_res_block, n_res_channel, stride=2)
     
     # --- Decoders ---
     top_decoder = get_decoder(embed_dim, embed_dim, channel, n_res_block, n_res_channel, stride=2)
-    decoder = get_decoder(embed_dim + embed_dim, in_channel, channel, n_res_block, n_res_channel, stride=16)
+    decoder = get_decoder(embed_dim + embed_dim, in_channel, channel, n_res_block, n_res_channel, stride=4)
      
     # --- Pre Quantization Layers ---
     pre_quantized_top = layers.Conv2D(embed_dim, 1, padding="same")
@@ -240,8 +234,8 @@ class VQVAETrainer(keras.models.Model):
         )
         self.valid_vq_loss_tracker = keras.metrics.Mean(name="val_vq_loss")
 
-        self.prequantize_top = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_26").output)
-        self.prequantize_bot = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_27").output)
+        self.prequantize_top = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_23").output)
+        self.prequantize_bot = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_24").output)
         self.mode = mode
 
         self.STFT_Layer = STFT(n_fft=2048, win_length=2048, hop_length=512,
@@ -306,8 +300,8 @@ class VQVAETrainer(keras.models.Model):
         phase_clean, phase_reverb = self.Phase_layer(stft_clean), self.Phase_layer(stft_reverb) # (88, 1024, 1)
         mag_clean, mag_reverb = self.Mag_Layer(stft_clean), self.Mag_Layer(stft_reverb)
         
-        clean_ref = tf.math.reduce_max(mag_clean) ** 2
-        reverb_ref = tf.math.reduce_max(mag_reverb) ** 2
+        clean_ref = tf.math.ceil(tf.math.reduce_max(mag_clean) ** 2)
+        reverb_ref = tf.math.ceil(tf.math.reduce_max(mag_reverb) ** 2)
 
         clean_db = MagnitudeToDecibel(ref_value=clean_ref, amin=1e-5 ** 2)
         reverb_db = MagnitudeToDecibel(ref_value=reverb_ref, amin=1e-5 ** 2)
@@ -343,8 +337,8 @@ class VQVAETrainer(keras.models.Model):
         phase_clean, phase_reverb = self.Phase_layer(stft_clean), self.Phase_layer(stft_reverb) # (88, 1024, 1)
         mag_clean, mag_reverb = self.Mag_Layer(stft_clean), self.Mag_Layer(stft_reverb)
         
-        clean_ref = tf.math.reduce_max(mag_clean) ** 2
-        reverb_ref = tf.math.reduce_max(mag_reverb) ** 2
+        clean_ref = tf.math.ceil(tf.math.reduce_max(mag_clean) ** 2)
+        reverb_ref = tf.math.ceil(tf.math.reduce_max(mag_reverb) ** 2)
 
         clean_db = MagnitudeToDecibel(ref_value=clean_ref, amin=1e-5 ** 2)
         reverb_db = MagnitudeToDecibel(ref_value=reverb_ref, amin=1e-5 ** 2)

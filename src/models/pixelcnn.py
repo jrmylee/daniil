@@ -53,7 +53,7 @@ class ResidualBlock(keras.layers.Layer):
         return keras.layers.add([inputs, x])
 
 def get_pixelcnn(input_size, n_residual_blocks = 5):
-    inputs = keras.Input(shape=top_input_size)
+    inputs = keras.Input(shape=input_size)
     x = PixelConvLayer(
         mask_type="A", filters=128, kernel_size=7, activation="relu", padding="same"
     )(inputs)
