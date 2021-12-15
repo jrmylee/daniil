@@ -11,6 +11,7 @@
 # Number of nodes:
 #SBATCH --nodes=1
 #
+#SBATCH -q v100_gpu3_normal
 # Number of tasks (one for each GPU desired for use case) (example):
 #SBATCH --ntasks=8
 #
@@ -18,10 +19,10 @@
 #SBATCH --cpus-per-task=1
 #
 #Number of GPUs, this can be in the format of "gpu:[1-4]", or "gpu:K80:[1-4] with the type included
-#SBATCH --gres=gpu:GTX2080TI:4
+#SBATCH --gres=gpu:V100:2
 #
 # Wall clock limit:
-#SBATCH --time=14:00:00
+#SBATCH --time=30:00:00
 #
 ## Command(s) to run (example):
 module unload python/3.7
