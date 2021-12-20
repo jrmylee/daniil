@@ -40,8 +40,7 @@ with open("config.json") as file:
             monitor='loss')
 
         # Quantizer Callback, this prints the embedding code frequency
-        quantizer_callback = QuantizerCallback()
 
-        callbacks = [model_checkpoint_callback, tensorboard_callback, quantizer_callback]
+        callbacks = [model_checkpoint_callback, tensorboard_callback]
 
         vqvae_trainer.fit(train_set, epochs=epochs, validation_data=test_set, callbacks=callbacks)
