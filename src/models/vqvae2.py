@@ -359,6 +359,8 @@ class VQVAETrainer(keras.models.Model):
 
         # Backpropagation.
         grads = tape.gradient(total_loss, self.vqvae.trainable_variables)
+        grads, _ = tf.clip_by_global_norm(grads, 5.0)
+
         self.optimizer.apply_gradients(zip(grads, self.vqvae.trainable_variables))
 
         # Loss tracking.
