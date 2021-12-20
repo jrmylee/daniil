@@ -125,10 +125,9 @@ def get_encoder(in_channel, out_channel, n_res_block, n_res_channel, stride):
         x = layers.Conv2D(out_channel, 4, activation="relu", strides=2, padding="same")(x)
         x = layers.Conv2D(out_channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 128)
         x = layers.Conv2D(out_channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 64)
-        x = layers.Conv2D(out_channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 32)
         x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
     elif stride == 2:
-        encoder_inputs = keras.Input(shape=(22, 32, in_channel))
+        encoder_inputs = keras.Input(shape=(22, 64, in_channel))
         x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=2, padding="same")(encoder_inputs) # (11, 32)
         x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
     
@@ -145,9 +144,9 @@ def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, st
     # get rid of this hard coded stuff
     
     if stride == 2: # top decoder
-        input_shape = (11, 16, in_channel)
+        input_shape = (11, 32, in_channel)
     elif stride == 16: # bottom decoder
-        input_shape = (22, 32, in_channel)
+        input_shape = (22, 64, in_channel)
     latent_inputs = keras.Input(input_shape) # (freq, frames, n_emb)
     
     x = layers.Conv2D(channel, 3, activation="relu", padding="same")(latent_inputs)
@@ -157,7 +156,6 @@ def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, st
     
     if stride == 16:
         x = layers.Conv2DTranspose(channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 64)
-        x = layers.Conv2DTranspose(channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 128)
         x = layers.Conv2DTranspose(channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 256)
         x = layers.Conv2DTranspose(channel // 2, 4, activation="relu", strides=2, padding="same")(x) # (44, 512)
         decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(x) # (88, 1024)
@@ -240,8 +238,8 @@ class VQVAETrainer(keras.models.Model):
         )
         self.valid_vq_loss_tracker = keras.metrics.Mean(name="val_vq_loss")
 
-        self.prequantize_top = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_26").output)
-        self.prequantize_bot = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_27").output)
+        self.prequantize_top = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_25").output)
+        self.prequantize_bot = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_26").output)
         self.mode = mode
 
         self.STFT_Layer = STFT(n_fft=2048, win_length=2048, hop_length=512,

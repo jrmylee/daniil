@@ -22,7 +22,7 @@ with open("config.json") as file:
 
     with mirrored_strategy.scope():
         # Model Definitions
-        vqvae_trainer = VQVAETrainer(latent_dim=128, num_embeddings=128)
+        vqvae_trainer = VQVAETrainer(latent_dim=256, num_embeddings=2048)
         vqvae_trainer.compile(optimizer=keras.optimizers.Adam(learning_rate=hparams.learning_rate))
 
         vqvae_trainer.set_mode("restoration")
@@ -32,7 +32,7 @@ with open("config.json") as file:
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
     
         # Checkpoint Callback
-        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_04")
+        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_05")
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,
