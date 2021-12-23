@@ -1,4 +1,4 @@
-from models.vqvae2 import *
+from models.vqvae3 import *
 from models.callbacks.QuantizerCallback import QuantizerCallback
 import tensorflow as tf
 from loader import get_audio_dataset, split_audio_dataset, load_audio
@@ -22,7 +22,7 @@ with open("config.json") as file:
 
     with mirrored_strategy.scope():
         # Model Definitions
-        vqvae_trainer = VQVAETrainer(latent_dim=256, num_embeddings=2048)
+        vqvae_trainer = VQVAETrainer(latent_dim=256, num_embeddings=512)
         vqvae_trainer.compile(optimizer=keras.optimizers.Adam(learning_rate=hparams.learning_rate))
 
         vqvae_trainer.set_mode("restoration")
@@ -32,7 +32,7 @@ with open("config.json") as file:
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
     
         # Checkpoint Callback
-        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_05")
+        checkpoint_filepath = os.path.join(hparams.model_save_dir, "recon_06")
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_filepath,
             save_weights_only=True,

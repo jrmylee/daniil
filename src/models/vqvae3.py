@@ -91,15 +91,6 @@ class VectorQuantizer(layers.Layer):
         # Derive the indices for minimum distances.
         # shape: (128 * 11,) or (256 * 22,)
         encoding_indices = tf.argmin(distances, axis=1)
-
-        # codebook collapse safe
-        # if flattened_inputs.shape[0] != None:
-        #     self.num_iterations.assign_add(flattened_inputs.shape[0])
-        #     for index in tf.unstack(encoding_indices):
-        #         self.embeddings_count[index].assign(self.embeddings_count[index] + 1)
-        #         if self.embeddings_count[index] / self.num_iterations < self.reset_threshold:
-        #             rand_index = tf.random.uniform(shape=[], minval=0, maxval=flattened_inputs.shape[0], dtype=tf.int64)
-        #             self.embeddings = self.update_columns(self.embeddings, index, flattened_inputs[rand_index])
         return encoding_indices
 
 def residual_block(x, in_channel, channel, kernel_size=3):
@@ -118,19 +109,13 @@ def residual_block(x, in_channel, channel, kernel_size=3):
     return out
 
 
-def get_encoder(in_channel, out_channel, n_res_block, n_res_channel, stride):
-    if stride == 16:
-        encoder_inputs = keras.Input(shape=(88, 1024, in_channel))
-        x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=2, padding="same")(encoder_inputs)
-        x = layers.Conv2D(out_channel, 4, activation="relu", strides=2, padding="same")(x)
-        x = layers.Conv2D(out_channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 128)
-        x = layers.Conv2D(out_channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 64)
-        x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
-    elif stride == 2:
-        encoder_inputs = keras.Input(shape=(22, 64, in_channel))
-        x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=2, padding="same")(encoder_inputs) # (11, 32)
-        x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
-    
+def get_encoder(in_channel, out_channel, n_res_block, n_res_channel):
+    encoder_inputs = keras.Input(shape=(88, 1024, in_channel))
+    x = layers.Conv2D(out_channel // 2, 4, activation="relu", strides=1, padding="same")(encoder_inputs)
+    x = layers.Conv2D(out_channel, 4, activation="relu", strides=1, padding="same")(x)
+    x = layers.Conv2D(out_channel, 4, activation="relu", strides=1, padding="same")(x) # (22, 128)
+    x = layers.Conv2D(out_channel, 3, strides=1, padding="same")(x)
+
     for i in range(n_res_block):
         x = residual_block(x, out_channel, n_res_channel)
     
@@ -140,13 +125,10 @@ def get_encoder(in_channel, out_channel, n_res_block, n_res_channel, stride):
 
 
 # takes downsampled by 4 samples with n_emb channels and outputs reconstructions
-def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, stride):
+def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel):
     # get rid of this hard coded stuff
     
-    if stride == 2: # top decoder
-        input_shape = (11, 32, in_channel)
-    elif stride == 16: # bottom decoder
-        input_shape = (22, 64, in_channel)
+    input_shape = (88, 1024, in_channel)
     latent_inputs = keras.Input(input_shape) # (freq, frames, n_emb)
     
     x = layers.Conv2D(channel, 3, activation="relu", padding="same")(latent_inputs)
@@ -154,15 +136,12 @@ def get_decoder(in_channel, out_channel, channel, n_res_block, n_res_channel, st
     for i in range(n_res_block):
         x = residual_block(x, channel, n_res_channel)
     
-    if stride == 16:
-        x = layers.Conv2DTranspose(channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 64)
-        x = layers.Conv2DTranspose(channel, 4, activation="relu", strides=(1, 2), padding="same")(x) # (22, 256)
-        x = layers.Conv2DTranspose(channel // 2, 4, activation="relu", strides=2, padding="same")(x) # (44, 512)
-        decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(x) # (88, 1024)
-    elif stride == 2:
-        decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=2, padding="same")(x) 
-        
+    x = layers.Conv2DTranspose(channel, 4, activation="relu", strides=1, padding="same")(x) # (22, 256)
+    x = layers.Conv2DTranspose(channel // 2, 4, activation="relu", strides=1, padding="same")(x) # (44, 512)
+    decoder_outputs = layers.Conv2DTranspose(out_channel, 4, strides=1, padding="same")(x) # (88, 1024)
+
     return keras.Model(latent_inputs, decoder_outputs)
+
 def get_vqvae(embed_dim, n_embed):    
     in_channel = 1
     channel = 128
@@ -173,50 +152,29 @@ def get_vqvae(embed_dim, n_embed):
     # --- Encoders ---
     # Bottom Encoder takes the original input and outputs one downsampled by 4, with 'channel' channels
     # Top Encoder takes the bottom encoded output and downsamples by 2.
-    bottom_encoder = get_encoder(in_channel, channel, n_res_block, n_res_channel, stride=16)
-    top_encoder = get_encoder(channel, channel, n_res_block, n_res_channel, stride=2)
+    encoder = get_encoder(in_channel, channel, n_res_block, n_res_channel)
     
     # --- Decoders ---
-    top_decoder = get_decoder(embed_dim, embed_dim, channel, n_res_block, n_res_channel, stride=2)
-    decoder = get_decoder(embed_dim + embed_dim, in_channel, channel, n_res_block, n_res_channel, stride=16)
+    decoder = get_decoder(embed_dim, in_channel, channel, n_res_block, n_res_channel)
      
     # --- Pre Quantization Layers ---
-    pre_quantized_top = layers.Conv2D(embed_dim, 1, padding="same")
-    pre_quantized_bottom = layers.Conv2D(embed_dim, 1, padding="same")
+    pre_quantized = layers.Conv2D(embed_dim, 1, padding="same")
     
     # --- Quantization Layers ---
-    quantize_top = VectorQuantizer(n_embed, embed_dim)
-    quantize_bottom = VectorQuantizer(n_embed, embed_dim)
-    
-    # Upsampling Layers
-    upsample_top = layers.Conv2DTranspose(embed_dim, 4, strides=2, padding="same")
-    
+    quantize_top = VectorQuantizer(n_embed, embed_dim)    
     
     # --------------- Model Definition ----------------
     input_shape = (88, 1024, 1)
     inputs = keras.Input(shape=input_shape)
     
-    encoded_bottom = bottom_encoder(inputs) # (1024, 88, 2) => (256, 22, 128)
-    encoded_top = top_encoder(encoded_bottom) # (256, 22, 128) => (128, 11, 128)
+    encoded = encoder(inputs) # (1024, 88, 2) => (256, 22, 128)
     
     # get top encoding ready for quantization
-    pre_quant_top = pre_quantized_top(encoded_top) # (128, 11, 128) => (128, 11, embed_dim)
-    quantized_top = quantize_top(pre_quant_top) # (128, 11, embed_dim)
-    
-    # Decode the top, and encode bottom layer with it
-    decoded_top = top_decoder(quantized_top) # (128, 11, 64) => (256, 22, 2)
-    encoded_bottom = layers.Concatenate(axis=3)([decoded_top, encoded_bottom]) # (256, 22, 130)
-    
-    # Get bottom encoding ready for quantization
-    pre_quant_bottom = pre_quantized_bottom(encoded_bottom) # (256, 22, 130) => (256, 22, embed_dim)
-    quantized_bottom = quantize_bottom(pre_quant_bottom) # (256, 22, embed_dim)
-    
-    # Use quantized top and bottom to decode
-    upsampled_top = upsample_top(quantized_top) # (128, 11, 64) => (256, 22 , embed_dim)
-    quantized = layers.Concatenate(axis=3)([upsampled_top, quantized_bottom]) # (256, 22, embed_dim + embed_dim)
-    
+    pre_quant = pre_quantized(encoded) # (128, 11, 128) => (128, 11, embed_dim)
+    quantized = quantize_top(pre_quant) # (128, 11, embed_dim)
+
     # Some magic
-    reconstructions = decoder(quantized) # (256, 22, 128) = > (1024, 88, 2)
+    reconstructions = decoder(quantized) # (1024, 88, embed_dim) = > (1024, 88, 2)
     
     return keras.Model(inputs, reconstructions, name="vq_vae")
 
@@ -237,9 +195,6 @@ class VQVAETrainer(keras.models.Model):
             name="val_reconstruction_loss"
         )
         self.valid_vq_loss_tracker = keras.metrics.Mean(name="val_vq_loss")
-
-        self.prequantize_top = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_25").output)
-        self.prequantize_bot = keras.Model(inputs=self.vqvae.input, outputs=self.vqvae.get_layer("conv2d_26").output)
         self.mode = mode
 
         self.STFT_Layer = STFT(n_fft=2048, win_length=2048, hop_length=512,
@@ -268,17 +223,6 @@ class VQVAETrainer(keras.models.Model):
     def get_code_indices(self, quantizer, x):
         flattened = tf.reshape(x, [-1, quantizer.embedding_dim])
         return quantizer.get_code_indices(flattened)
-
-    def top_and_bottom_indices(self, x):
-        pretop = self.prequantize_top(x)
-        prebot = self.prequantize_bot(x)
-
-        top_quantizer = self.vqvae.get_layer("vector_quantizer")
-        bot_quantizer = self.vqvae.get_layer("vector_quantizer_1")
-
-        top_i = self.get_code_indices(top_quantizer, pretop)
-        bot_i = self.get_code_indices(bot_quantizer, prebot)
-        return top_i, bot_i
 
     def decode(self, quantized_top, quantized_bot):
         upsample_top = self.vqvae.get_layer("conv2d_transpose_3")
@@ -359,9 +303,11 @@ class VQVAETrainer(keras.models.Model):
 
         # Backpropagation.
         grads = tape.gradient(total_loss, self.vqvae.trainable_variables)
+        grads, _ = tf.clip_by_global_norm(grads, 5.0)
+
         self.optimizer.apply_gradients(zip(grads, self.vqvae.trainable_variables))
 
-        # Loss tracking.
+        # Loss tracking.l
         self.total_loss_tracker.update_state(total_loss)
         self.reconstruction_loss_tracker.update_state(reconstruction_loss)
         self.vq_loss_tracker.update_state(sum(self.vqvae.losses))

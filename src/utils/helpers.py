@@ -49,6 +49,7 @@ def concat_stft(chunked_stft, chunk_size=88):
 def load_test_data(ds_path, mapping_filename, num_pieces):    
     csv_path = os.path.join(ds_path, mapping_filename)
     csv = pd.read_csv(csv_path)
+    csv = csv.sample(frac=1)
     files = []
     
     counter = 0
